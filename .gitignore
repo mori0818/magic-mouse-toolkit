@@ -1,0 +1,26 @@
+# Build artifacts
+build/
+*.o
+*.dSYM
+
+# Code signing material - NEVER commit private keys/certs
+*.p12
+*.pem
+*.cer
+codesign/
+
+# macOS
+.DS_Store
+
+# Xcode (in case a project is added later)
+*.xcuserstate
+xcuserdata/
+DerivedData/
+.build/
+.swiftpm/
+
+# Prototype build artifacts
+prototypes/**/*.app/
+prototypes/glass_window_test/glass_test
+prototypes/glass_window_test/pure_appkit_test
+prototypes/glass_window_test/header_blur_test

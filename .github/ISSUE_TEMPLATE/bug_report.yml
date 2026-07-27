@@ -1,0 +1,56 @@
+name: Bug report
+description: Report a reproducible problem with Magic Control
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before testing permission-related behavior, read `SAFETY.md`.
+        Do not toggle or reset Accessibility permissions while Magic Control is running.
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version
+      placeholder: "macOS 26.x"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Magic Mouse model
+      placeholder: "Magic Mouse 2 / USB-C Magic Mouse"
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: List the smallest safe sequence that reproduces the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Remove personal information before pasting excerpts from MagicControl.log.
+      render: text
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety confirmation
+      options:
+        - label: I did not toggle, remove, or reset Accessibility permissions while Magic Control was running.
+          required: true
