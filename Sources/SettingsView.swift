@@ -66,9 +66,16 @@ struct SettingsView: View {
 
     /// 3本指タップに割り当てられる ActionKind の種別(設定UI用)。
     private enum BoundActionKind: String, CaseIterable, Identifiable {
-        case macro = "マクロ"
-        case trackpadToggle = "トラックパッドモード切替"
+        case macro
+        case trackpadToggle
         var id: String { rawValue }
+
+        var localizedTitle: String {
+            switch self {
+            case .macro: return NSLocalizedString("マクロ", comment: "3本指タップの割り当て種別")
+            case .trackpadToggle: return NSLocalizedString("トラックパッドモード切替", comment: "3本指タップの割り当て種別")
+            }
+        }
     }
 
     /// MacroRecorder のセッションラベル(保存先の確定と録画中の相互排他に使う)
@@ -117,28 +124,28 @@ struct SettingsView: View {
         .scrollEdgeEffectHidden(true, for: .top)
         .frame(width: DS.Layout.windowSize.width, height: DS.Layout.windowSize.height)
         // Figma node 4:179 の背景構造(2026-07-10確定): 全面ガラスではなく、
-        // ガラスは縁8pxのリムとしてだけ見え、その内側に白プレート(角丸はDS.Radius.plate)を敷く。
+        // ガラスは縁8pxのリムとしてだけ見え、その内側に白プレート(角丸はDS.Plate.radius)を敷く。
         // プレートはタイトルバー領域の下まで届く(ignoresSafeArea)ため、
         // 信号機・タイトルはプレートの上に重なって見える。
         // プレートは白固定。フェードは縁からの距離ベース(2026-07-10改):
         // 縁がわずかに透ける白ベース(plateBase)の上に、縁からplateFadeWidthだけ
         // 引っ込めてblurした白コア(plateCore)を重ねる。中央はほぼ白(≈0.96)、
         // ごく縁の近くだけ下のglassEffectのブラーがふわっと滲む(Figmaの質感)。
-        // 角丸はcontinuousでウィンドウ外側の角丸と同心にする(DS.Radius.plate参照)
+        // 角丸はcontinuousでウィンドウ外側の角丸と同心にする(DS.Plate.radius参照)
         .background(
             ZStack {
                 SwiftUI.Color.clear
                     .glassEffect(.regular, in: Rectangle())
-                RoundedRectangle(cornerRadius: DS.Radius.plate, style: .continuous)
+                RoundedRectangle(cornerRadius: DS.Plate.radius, style: .continuous)
                     .fill(DS.Color.plateBase)
                     .overlay(
-                        RoundedRectangle(cornerRadius: DS.Radius.plate, style: .continuous)
+                        RoundedRectangle(cornerRadius: DS.Plate.radius, style: .continuous)
                             .fill(DS.Color.plateCore)
-                            .blur(radius: DS.Blur.plateFade)
-                            .padding(DS.Space.plateFadeWidth)
+                            .blur(radius: DS.Plate.fadeBlur)
+                            .padding(DS.Plate.fadeWidth)
                     )
-                    .clipShape(RoundedRectangle(cornerRadius: DS.Radius.plate, style: .continuous))
-                    .padding(DS.Space.plateInset)
+                    .clipShape(RoundedRectangle(cornerRadius: DS.Plate.radius, style: .continuous))
+                    .padding(DS.Plate.inset)
             }
             .ignoresSafeArea()
         )
@@ -152,68 +159,77 @@ struct SettingsView: View {
     // Figma node 4:179: Form/Sectionは使わず、白プレートの上に直接置くフラット構成。
     // セクションヘッダー・行背景・グループ枠・説明キャプションは置かない。
 
+    // HStack の spacing は隣接ペアすべてに入るため、末尾に Spacer を置くと columnGap が
+    // 2回分(44×2)効いて 328+44+264+44=680 > 636(=700-32-32) になり、はみ出した HStack が
+    // 中央寄せされて左右余白が非対称になる(左≈18/右≈62)。子は2つだけに保つこと(2026-07-27)。
     private var mainPage: some View {
         HStack(alignment: .top, spacing: DS.Layout.columnGap) {
             leftColumn
                 .frame(width: DS.Layout.mainColumnWidth, alignment: .topLeading)
             liveDisplayPanel
-            Spacer(minLength: 0)
         }
         .padding(.leading, DS.Layout.contentLeading)
+        .padding(.trailing, DS.Layout.contentTrailing)
         .padding(.top, DS.Layout.contentTop)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var leftColumn: some View {
-        VStack(alignment: .leading, spacing: DS.Space.rowGap) {
-            toggleRow("有効にする", isOn: $enabled)
+        VStack(alignment: .leading, spacing: DS.Space.s) {
+            toggleRow(NSLocalizedString("有効にする", comment: "メイン設定トグル"), isOn: $enabled)
                 .notifyOnChange(of: enabled)
-            toggleRow("1本指タップで左/右クリック", isOn: $oneFingerTapEnabled)
+            toggleRow(NSLocalizedString("1本指タップで左/右クリック", comment: "メイン設定トグル"), isOn: $oneFingerTapEnabled)
                 .notifyOnChange(of: oneFingerTapEnabled)
-            toggleRow("2本指タップで左クリック", isOn: $twoFingerTapEnabled)
+            toggleRow(NSLocalizedString("2本指タップで左クリック", comment: "メイン設定トグル"), isOn: $twoFingerTapEnabled)
                 .notifyOnChange(of: twoFingerTapEnabled)
-            toggleRow("2本指クリックでミドルクリック", isOn: $middleClickEnabled)
+            toggleRow(NSLocalizedString("2本指クリックでミドルクリック", comment: "メイン設定トグル"), isOn: $middleClickEnabled)
                 .notifyOnChange(of: middleClickEnabled)
-            toggleRow("縦方向のみにスクロール(横スクロール無効)", isOn: $verticalScrollOnly)
+            toggleRow(NSLocalizedString("縦方向のみにスクロール(横スクロール無効)", comment: "メイン設定トグル"), isOn: $verticalScrollOnly)
                 .notifyOnChange(of: verticalScrollOnly)
 
             HStack(spacing: DS.Space.s) {
                 // ラベルはSliderに押されて省略(…)されやすいため全文表示を優先する
-                rowLabel("右クリックの開始位置")
+                rowLabel(NSLocalizedString("右クリックの開始位置", comment: "メイン設定ラベル"))
                     .fixedSize()
                     .layoutPriority(1)
                 Slider(value: $rightZoneMinX, in: 0...1)
-                    .controlSize(.mini)
-                Text(String(format: "左から%.0f%%", rightZoneMinX * 100))
-                    .font(DS.Font.cardValue)
+                    .controlSize(.small)
+                Text(String(format: NSLocalizedString("左から%.0f%%", comment: "座標(%)"), rightZoneMinX * 100))
+                    .font(DS.Font.value)
                     .foregroundColor(DS.Color.labelSecondary)
             }
             .frame(height: DS.Layout.rowHeight)
             .notifyOnChange(of: rightZoneMinX)
 
+            // ボタンの文法は .bordered 1本に統一し、階層は controlSize だけで表す(2026-07-27)。
+            // 「詳細設定」はページ遷移という主要アクションなので regular、録画/クリア等の
+            // 副次アクションと周囲のトグル行は small に揃える(.borderedProminent は使わない)。
             HStack {
                 Spacer()
-                Button("詳細設定") {
+                Button(NSLocalizedString("詳細設定", comment: "詳細設定ページへの遷移ボタン")) {
                     showDetailSettings = true
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.small)
+                .controlSize(.regular)
             }
 
             toggleRow(
                 tap3ActionKind == .trackpadToggle
-                    ? "3本指ダブルタップで実行"
-                    : "3本指タップで実行",
+                    ? NSLocalizedString("3本指ダブルタップで実行", comment: "メイン設定トグル")
+                    : NSLocalizedString("3本指タップで実行", comment: "メイン設定トグル"),
                 isOn: $threeFingerTapEnabled)
                 .notifyOnChange(of: threeFingerTapEnabled)
-                .padding(.top, DS.Space.groupGap)
+                .padding(.top, DS.Space.l)
 
-            Picker("割り当て", selection: $tap3ActionKind) {
+            Picker(NSLocalizedString("割り当て", comment: "3本指タップの割り当て選択"), selection: $tap3ActionKind) {
                 ForEach(BoundActionKind.allCases) { kind in
-                    Text(kind.rawValue).tag(kind)
+                    Text(kind.localizedTitle).tag(kind)
                 }
             }
             .pickerStyle(.segmented)
+            // 周囲のトグル行(すべて .small)と同じリズムに揃える。ここは「詳細設定」より
+            // 下位の設定なので、サイズでもそう見せる
+            .controlSize(.small)
             .onChange(of: tap3ActionKind) { _, newValue in
                 switch newValue {
                 case .trackpadToggle:
@@ -228,7 +244,9 @@ struct SettingsView: View {
 
             if tap3ActionKind == .macro {
                 HStack(spacing: DS.Space.s) {
-                    Button(isRecordingTap3Macro ? "録画を停止して保存" : "録画を開始") {
+                    Button(isRecordingTap3Macro
+                           ? NSLocalizedString("録画を停止して保存", comment: "マクロ録画ボタン")
+                           : NSLocalizedString("録画を開始", comment: "マクロ録画ボタン")) {
                         if isRecordingTap3Macro {
                             macroRecorder.stop()
                         } else {
@@ -241,7 +259,7 @@ struct SettingsView: View {
                     .controlSize(.small)
                     // 別の録画セッションが動作中の場合は開始しない(保存先の混線防止)
                     .disabled(macroRecorder.isRecording && !isRecordingTap3Macro)
-                    Button("クリア") {
+                    Button(NSLocalizedString("クリア", comment: "マクロクリアボタン")) {
                         macroRecorder.clear()
                         AppSettings.shared.threeFingerTapAction = .macro([])
                     }
@@ -251,20 +269,20 @@ struct SettingsView: View {
                 }
 
                 Text(isRecordingTap3Macro
-                     ? "録画中… \(macroRecorder.recordedEvents.count)イベント"
-                     : "登録済み：\(savedMacroEventCount)イベント")
-                    .font(DS.Font.cardCaption)
+                     ? String(format: NSLocalizedString("録画中… %dイベント", comment: "マクロ録画中の件数表示"), macroRecorder.recordedEvents.count)
+                     : String(format: NSLocalizedString("登録済み：%dイベント", comment: "マクロ登録済み件数表示"), savedMacroEventCount))
+                    .font(DS.Font.caption)
                     .foregroundColor(isRecordingTap3Macro ? DS.Color.debugFail : DS.Color.labelSecondary)
             }
         }
     }
 
-    /// メイン画面のフラット行ラベル(13pt/secondary/tracking 0.5)。
+    /// メイン画面のフラット行ラベル。操作行のラベルは詳細設定のSliderRowと同じく
+    /// body(13pt)/labelPrimary に統一する(macOSの慣例。labelSecondaryはキャプションと数値表示に限定)。
     private func rowLabel(_ text: String) -> Text {
         Text(text)
-            .font(DS.Font.rowLabel)
-            .tracking(0.5)
-            .foregroundColor(DS.Color.labelSecondary)
+            .font(DS.Font.body)
+            .foregroundColor(DS.Color.labelPrimary)
     }
 
     /// 「ラベル左寄せ + スイッチ右端」のフラット行(行高 DS.Layout.rowHeight)。
@@ -284,16 +302,15 @@ struct SettingsView: View {
     /// 右カラム: 見出し + グレーカード(DS.Layout.liveCardSize固定・プレート内に収める)。
     /// カード内は上部に指の本数/座標、直近イベント、判定内訳の順でScrollView表示。
     private var liveDisplayPanel: some View {
-        VStack(alignment: .leading, spacing: DS.Space.cardHeadingGap) {
-            Text("タップ座標のライブ表示")
-                .font(DS.Font.cardHeading)
-                .tracking(0.5)
+        VStack(alignment: .leading, spacing: DS.Space.m) {
+            Text(NSLocalizedString("タップ座標のライブ表示", comment: "ライブ表示カードの見出し"))
+                .font(DS.Font.sectionHeader)
                 .foregroundColor(DS.Color.labelSecondary)
-                .padding(.leading, DS.Space.headingIndent)
+                .padding(.leading, DS.Space.m)
 
             ScrollView {
                 debugContent
-                    .padding(DS.Space.cardPadding)
+                    .padding(DS.Space.m)
             }
             .scrollContentBackground(.hidden)
             .frame(width: DS.Layout.liveCardSize.width, height: DS.Layout.liveCardSize.height)
@@ -318,109 +335,132 @@ struct SettingsView: View {
             Button {
                 showDetailSettings = false
             } label: {
+                // アイコンはページ見出しと同格(13pt/semibold)に揃える
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(DS.Font.pageTitle)
             }
-            .buttonStyle(.glass)
+            .buttonStyle(.bordered)
+            .controlSize(.small)
 
-            Text("詳細設定")
-                .font(DS.Font.sectionHeader)
+            Text(NSLocalizedString("詳細設定", comment: "詳細設定ページの見出し"))
+                .font(DS.Font.pageTitle)
                 .foregroundColor(DS.Color.labelPrimary)
 
             Spacer()
         }
-        .padding(.horizontal, DS.Space.windowPadding)
-        .padding(.top, DS.Space.m)
+        // 下の Form(.grouped) のセクション見出し・行の実効インセット
+        // (DS.Layout.formBuiltInInset=30) は formInsetCompensation で contentLeading まで
+        // 押し出してあるので、ヘッダーも同じ値を使えば戻るボタンの枠の左端が
+        // セクション見出し・行ラベル・メイン画面の行ラベルと同じ 32pt に揃う
+        // (@2xキャプチャの画素実測で確認・2026-07-28)
+        .padding(.leading, DS.Layout.contentLeading)
+        .padding(.trailing, DS.Layout.contentTrailing)
+        // 上余白はメイン画面と同じ contentTop(8)。ページ種別ごとにトークンを分けず1本に統一
+        .padding(.top, DS.Layout.contentTop)
         .padding(.bottom, DS.Space.xs)
     }
 
     private var detailForm: some View {
         Form {
-            Section(header: sectionHeader("タップに反応する範囲")) {
-                SliderRow("先端側の反応範囲", value: frontDepthBinding, range: 0.05...1.0) {
-                    String(format: "先端から%.0f%%", $0 * 100)
+            Section(header: sectionHeader(NSLocalizedString("タップに反応する範囲", comment: "詳細設定セクション見出し"))) {
+                // 値カラムは「数値+単位」だけに保つ(方向はラベルが持っている)。
+                // ローカライズ不要な純数値フォーマットにして、どの言語でも1行に収める(2026-07-28)
+                SliderRow(NSLocalizedString("先端側の反応範囲", comment: "詳細設定スライダーラベル"), value: frontDepthBinding, range: 0.05...1.0) {
+                    String(format: "%.0f%%", $0 * 100)
                 }
                 .notifyOnChange(of: zoneMinY)
-                caption("マウス表面の先端(指先側)からこの割合までをタップに反応させます。初期値は25%です")
+                caption(NSLocalizedString("マウス表面の先端(指先側)からこの割合までをタップに反応させます。初期値は25%です", comment: "詳細設定キャプション"))
 
-                Toggle("詳細設定を表示", isOn: $zoneDetailExpanded)
-                    .toggleStyle(.switch).tint(DS.Color.accent)
+                Toggle(NSLocalizedString("詳細設定を表示", comment: "反応範囲の詳細表示トグル"), isOn: $zoneDetailExpanded)
+                    .toggleStyle(.switch)
+                    .controlSize(.small)
+                    .tint(DS.Color.accent)
                 if zoneDetailExpanded {
-                    SliderRow("左右: 左端", value: $zoneMinX, range: 0...1) { String(format: "左から%.0f%%", $0 * 100) }
+                    SliderRow(NSLocalizedString("左右: 左端", comment: "詳細設定スライダーラベル"), value: $zoneMinX, range: 0...1) { String(format: "%.0f%%", $0 * 100) }
                         .notifyOnChange(of: zoneMinX)
-                    SliderRow("左右: 右端", value: $zoneMaxX, range: 0...1) { String(format: "左から%.0f%%", $0 * 100) }
+                    SliderRow(NSLocalizedString("左右: 右端", comment: "詳細設定スライダーラベル"), value: $zoneMaxX, range: 0...1) { String(format: "%.0f%%", $0 * 100) }
                         .notifyOnChange(of: zoneMaxX)
-                    SliderRow("前後: 手前端", value: $zoneMinY, range: 0...1) { String(format: "手前から%.0f%%", $0 * 100) }
+                    SliderRow(NSLocalizedString("前後: 手前端", comment: "詳細設定スライダーラベル"), value: $zoneMinY, range: 0...1) { String(format: "%.0f%%", $0 * 100) }
                         .notifyOnChange(of: zoneMinY)
-                    SliderRow("前後: 先端", value: $zoneMaxY, range: 0...1) { String(format: "手前から%.0f%%", $0 * 100) }
+                    SliderRow(NSLocalizedString("前後: 先端", comment: "詳細設定スライダーラベル"), value: $zoneMaxY, range: 0...1) { String(format: "%.0f%%", $0 * 100) }
                         .notifyOnChange(of: zoneMaxY)
-                    caption("0%=左端・手前(手首側)、100%=右端・先端(指先側)。「前後: 手前端」は上の「先端側の反応範囲」と連動します")
-                    Button("反応範囲を初期設定に戻す") {
+                    caption(NSLocalizedString("0%=左端・手前(手首側)、100%=右端・先端(指先側)。「前後: 手前端」は上の「先端側の反応範囲」と連動します", comment: "詳細設定キャプション"))
+                    Button(NSLocalizedString("反応範囲を初期設定に戻す", comment: "リセットボタン")) {
                         AppSettings.shared.resetZoneToDefaults()
                     }
+                    .buttonStyle(.bordered)
                     .controlSize(.small)
                 }
             }
 
-            Section(header: sectionHeader("タップ判定のきびしさ")) {
-                SliderRow("タップの最長時間", value: $tapMaxDuration, range: 0.05...0.5) { String(format: "%.2f秒", $0) }
+            Section(header: sectionHeader(NSLocalizedString("タップ判定のきびしさ", comment: "詳細設定セクション見出し"))) {
+                SliderRow(NSLocalizedString("タップの最長時間", comment: "詳細設定スライダーラベル"), value: $tapMaxDuration, range: 0.05...0.5) { String(format: NSLocalizedString("%.2f秒", comment: "秒数"), $0) }
                     .notifyOnChange(of: tapMaxDuration)
-                SliderRow("位置ズレの許容量", value: $tapMaxStraightDistance, range: 0.01...0.3) { String(format: "%.2f", $0) }
+                SliderRow(NSLocalizedString("位置ズレの許容量", comment: "詳細設定スライダーラベル"), value: $tapMaxStraightDistance, range: 0.01...0.3) { String(format: "%.2f", $0) }
                     .notifyOnChange(of: tapMaxStraightDistance)
-                SliderRow("動きの合計の許容量", value: $tapMaxPathLength, range: 0.01...0.3) { String(format: "%.2f", $0) }
+                SliderRow(NSLocalizedString("動きの合計の許容量", comment: "詳細設定スライダーラベル"), value: $tapMaxPathLength, range: 0.01...0.3) { String(format: "%.2f", $0) }
                     .notifyOnChange(of: tapMaxPathLength)
-                SliderRow("動きの速さの許容量", value: $tapMaxVelocity, range: 0.2...8.0) { String(format: "%.1f", $0) }
+                SliderRow(NSLocalizedString("動きの速さの許容量", comment: "詳細設定スライダーラベル"), value: $tapMaxVelocity, range: 0.2...8.0) { String(format: "%.1f", $0) }
                     .notifyOnChange(of: tapMaxVelocity)
-                SliderRow("最短の接触フレーム数", value: tapMinFramesBinding, range: 1...10) { String(format: "%.0f", $0) }
+                SliderRow(NSLocalizedString("最短の接触フレーム数", comment: "詳細設定スライダーラベル"), value: tapMinFramesBinding, range: 1...10) { String(format: "%.0f", $0) }
                     .notifyOnChange(of: tapMinFrames)
-                caption("それぞれ右に動かすほど反応しやすくなります(最短接触フレーム数のみ左に動かすほど反応しやすい)。反応しやすいほどスクロールとの誤反応は増えます")
-                Button("タップ判定を初期設定に戻す") {
+                caption(NSLocalizedString("それぞれ右に動かすほど反応しやすくなります(最短接触フレーム数のみ左に動かすほど反応しやすい)。反応しやすいほどスクロールとの誤反応は増えます", comment: "詳細設定キャプション"))
+                Button(NSLocalizedString("タップ判定を初期設定に戻す", comment: "リセットボタン")) {
                     AppSettings.shared.resetSensitivityToDefaults()
                 }
+                .buttonStyle(.bordered)
                 .controlSize(.small)
             }
 
-            Section(header: sectionHeader("誤反応の防止")) {
-                SliderRow("スクロール後の待ち時間", value: $scrollVetoWindow, range: 0...1.0) { String(format: "%.2f秒", $0) }
+            Section(header: sectionHeader(NSLocalizedString("誤反応の防止", comment: "詳細設定セクション見出し"))) {
+                SliderRow(NSLocalizedString("スクロール後の待ち時間", comment: "詳細設定スライダーラベル"), value: $scrollVetoWindow, range: 0...1.0) { String(format: NSLocalizedString("%.2f秒", comment: "秒数"), $0) }
                     .notifyOnChange(of: scrollVetoWindow)
-                SliderRow("クリック後の待ち時間", value: $buttonVetoWindow, range: 0...0.5) { String(format: "%.2f秒", $0) }
+                SliderRow(NSLocalizedString("クリック後の待ち時間", comment: "詳細設定スライダーラベル"), value: $buttonVetoWindow, range: 0...0.5) { String(format: NSLocalizedString("%.2f秒", comment: "秒数"), $0) }
                     .notifyOnChange(of: buttonVetoWindow)
-                SliderRow("2本指の同時判定時間", value: $twoFingerSyncWindow, range: 0.02...0.2) { String(format: "%.2f秒", $0) }
+                SliderRow(NSLocalizedString("2本指の同時判定時間", comment: "詳細設定スライダーラベル"), value: $twoFingerSyncWindow, range: 0.02...0.2) { String(format: NSLocalizedString("%.2f秒", comment: "秒数"), $0) }
                     .notifyOnChange(of: twoFingerSyncWindow)
-                caption("スクロールや物理クリックの直後は、この時間だけタップを無視して誤クリックを防ぎます。2本指の同時判定時間は、2本の指のタッチ開始がこの時間内に収まったとき2本指タップとみなす設定です")
-                Button("誤反応の防止を初期設定に戻す") {
+                caption(NSLocalizedString("スクロールや物理クリックの直後は、この時間だけタップを無視して誤クリックを防ぎます。2本指の同時判定時間は、2本の指のタッチ開始がこの時間内に収まったとき2本指タップとみなす設定です", comment: "詳細設定キャプション"))
+                Button(NSLocalizedString("誤反応の防止を初期設定に戻す", comment: "リセットボタン")) {
                     AppSettings.shared.resetVetoToDefaults()
                 }
+                .buttonStyle(.bordered)
                 .controlSize(.small)
             }
 
-            Section(header: sectionHeader("カーソル速度ブースト")) {
-                SliderRow("軌跡の速さ", value: $pointerSpeedBoost, range: 0...9.0) {
-                    $0 <= 0 ? "オフ(システム設定のまま)" : String(format: "x%.1f", $0)
+            Section(header: sectionHeader(NSLocalizedString("カーソル速度ブースト", comment: "詳細設定セクション見出し"))) {
+                SliderRow(NSLocalizedString("軌跡の速さ", comment: "詳細設定スライダーラベル"), value: $pointerSpeedBoost, range: 0...9.0) {
+                    $0 <= 0 ? NSLocalizedString("オフ", comment: "カーソル速度ブーストのオフ表示") : String(format: "x%.1f", $0)
                 }
                 .notifyOnChange(of: pointerSpeedBoost)
-                caption("システム設定の上限(3.0)を超えてカーソルの軌跡速度を上げます。オフにする、またはアプリを終了すると元の速度に戻ります。システム設定の「マウス」を開くと一時的に上書きされることがあります")
+                caption(NSLocalizedString("システム設定の上限(3.0)を超えてカーソルの軌跡速度を上げます。オフにする、またはアプリを終了すると元の速度に戻ります。システム設定の「マウス」を開くと一時的に上書きされることがあります", comment: "詳細設定キャプション"))
             }
 
-            Section(header: sectionHeader("トラックパッドモード")) {
-                SliderRow("移動ゲイン", value: $trackpadModeGain, range: 200...3000) { String(format: "%.0f", $0) }
+            Section(header: sectionHeader(NSLocalizedString("トラックパッドモード", comment: "詳細設定セクション見出し"))) {
+                SliderRow(NSLocalizedString("移動ゲイン", comment: "詳細設定スライダーラベル"), value: $trackpadModeGain, range: 200...3000) { String(format: "%.0f", $0) }
                     .notifyOnChange(of: trackpadModeGain)
-                caption("マウス表面のなぞりをカーソル移動に変換する際の倍率です。3本指ダブルタップ、または下のボタンでモードのON/OFFを切り替えます")
-                Button(TrackpadModeController.shared.isActive ? "今すぐOFFにする" : "今すぐONにする") {
+                caption(NSLocalizedString("マウス表面のなぞりをカーソル移動に変換する際の倍率です。3本指ダブルタップ、または下のボタンでモードのON/OFFを切り替えます", comment: "詳細設定キャプション"))
+                Button(TrackpadModeController.shared.isActive
+                       ? NSLocalizedString("今すぐOFFにする", comment: "トラックパッドモード切替ボタン")
+                       : NSLocalizedString("今すぐONにする", comment: "トラックパッドモード切替ボタン")) {
                     TrackpadModeController.shared.toggle()
                 }
+                .buttonStyle(.bordered)
                 .controlSize(.small)
             }
 
             Section {
-                Button("すべての設定を既定値に戻す") {
+                Button(NSLocalizedString("すべての設定を既定値に戻す", comment: "全設定リセットボタン")) {
                     AppSettings.shared.resetAllToDefaults()
                 }
+                .buttonStyle(.bordered)
                 .controlSize(.small)
             }
         }
         .formStyle(.grouped)
         .scrollContentBackground(.hidden)
+        // Form(.grouped) のセクション見出しが持つ左右インセット(formBuiltInInset)を、
+        // メイン画面と同じ contentLeading/Trailing まで押し出す(Form の構造自体は変えない)
+        .padding(.horizontal, DS.Layout.formInsetCompensation)
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -440,47 +480,47 @@ struct SettingsView: View {
     private var debugContent: some View {
         VStack(alignment: .leading, spacing: DS.Space.s) {
             HStack {
-                Text("指の本数：\(debugFeed.currentFingerCount)")
+                Text(String(format: NSLocalizedString("指の本数：%d", comment: "ライブ表示: 指の本数"), debugFeed.currentFingerCount))
                 Spacer()
-                Text(String(format: "左から%.0f%% 手前から%.0f%%",
+                Text(String(format: NSLocalizedString("左から%.0f%% 手前から%.0f%%", comment: "座標(%)"),
                             debugFeed.latestTouchX * 100, debugFeed.latestTouchY * 100))
             }
-            .font(DS.Font.cardBody)
+            .font(DS.Font.caption)
             .foregroundColor(DS.Color.labelSecondary)
 
             Divider()
 
-            Text("直近のイベント")
-                .font(DS.Font.cardCaption)
+            Text(NSLocalizedString("直近のイベント", comment: "ライブ表示見出し"))
+                .font(DS.Font.caption)
                 .foregroundColor(DS.Color.labelSecondary)
             ForEach(debugFeed.recentEvents) { event in
                 Text(event.text)
-                    .font(DS.Font.cardCaption)
+                    .font(DS.Font.caption)
                     .foregroundColor(DS.Color.labelPrimary)
             }
 
             Divider()
 
-            Text("直近のタップ試行の判定内訳")
-                .font(DS.Font.cardCaption)
+            Text(NSLocalizedString("直近のタップ試行の判定内訳", comment: "ライブ表示見出し"))
+                .font(DS.Font.caption)
                 .foregroundColor(DS.Color.labelSecondary)
             if debugFeed.lastAttempt.isEmpty {
-                Text("(まだ試行なし)")
-                    .font(DS.Font.cardCaption)
+                Text(NSLocalizedString("(まだ試行なし)", comment: "ライブ表示: 判定内訳が空のときの表示"))
+                    .font(DS.Font.caption)
                     .foregroundColor(DS.Color.labelSecondary)
             } else {
                 ForEach(debugFeed.lastAttempt) { condition in
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: DS.Space.xs) {
                         HStack(spacing: DS.Space.xs) {
                             Text(condition.passed ? "✓" : "✗")
-                                .font(DS.Font.cardCaption)
+                                .font(DS.Font.caption)
                                 .foregroundColor(condition.passed ? DS.Color.debugPass : DS.Color.debugFail)
                             Text(condition.label)
-                                .font(DS.Font.cardCaption)
+                                .font(DS.Font.caption)
                                 .foregroundColor(DS.Color.labelPrimary)
                         }
                         Text("\(condition.actual) / \(condition.threshold)")
-                            .font(DS.Font.cardValue)
+                            .font(DS.Font.value)
                             .foregroundColor(DS.Color.labelSecondary)
                     }
                 }

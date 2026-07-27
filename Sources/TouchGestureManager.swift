@@ -274,8 +274,8 @@ final class TouchGestureManager {
 
         guard evaluation.passed else {
             if let reason = evaluation.firstFailure {
-                DebugFeed.shared.pushEvent(reason.rawValue)
-                MMTLog.log("[診断] タップ不成立 id=\(track.id): \(reason.rawValue)")
+                DebugFeed.shared.pushEvent(reason.localizedDescription)
+                MMTLog.log("[診断] タップ不成立 id=\(track.id): \(reason.localizedDescription)")
             }
             return
         }
@@ -327,17 +327,17 @@ final class TouchGestureManager {
         switch group.count {
         case 1:
             guard group[0].inZone else {
-                DebugFeed.shared.pushEvent(TapFailureReason.outOfZone.rawValue)
+                DebugFeed.shared.pushEvent(TapFailureReason.outOfZone.localizedDescription)
                 return
             }
             fireOneFingerTap(track: group[0], settings: settings)
         case 2:
             guard settings.twoFingerTapEnabled else { return }
             guard group.allSatisfy(\.inZone) else {
-                DebugFeed.shared.pushEvent(TapFailureReason.outOfZone.rawValue)
+                DebugFeed.shared.pushEvent(TapFailureReason.outOfZone.localizedDescription)
                 return
             }
-            fireClick(button: .left, reason: "2本指タップ")
+            fireClick(button: .left, reason: NSLocalizedString("2本指タップ", comment: "タップ成立イベント種別"))
         default:
             guard settings.threeFingerTapEnabled else {
                 MMTLog.log("[診断] 3本指: threeFingerTapEnabled=false のため不発")
@@ -354,7 +354,7 @@ final class TouchGestureManager {
             }
             MMTLog.log("[診断] 3本指: アクション実行 \(settings.threeFingerTapAction)")
             ActionExecutor.perform(settings.threeFingerTapAction)
-            DebugFeed.shared.pushEvent("タップ成立(3本指)")
+            DebugFeed.shared.pushEvent(String(format: NSLocalizedString("タップ成立(%@)", comment: "タップ成立通知"), NSLocalizedString("3本指", comment: "タップ成立イベント種別")))
         }
     }
 
@@ -368,20 +368,20 @@ final class TouchGestureManager {
             return
         }
         if Double(track.lastPos.x) > settings.rightZoneMinX {
-            fireClick(button: .right, reason: "1本指タップ(右)")
+            fireClick(button: .right, reason: NSLocalizedString("1本指タップ(右)", comment: "タップ成立イベント種別"))
         } else {
-            fireClick(button: .left, reason: "1本指タップ(左)")
+            fireClick(button: .left, reason: NSLocalizedString("1本指タップ(左)", comment: "タップ成立イベント種別"))
         }
     }
 
     private func fireClick(button: SynthesizedClick.Button, reason: String) {
         guard SharedState.shared.accessibilityGranted else {
-            DebugFeed.shared.pushEvent("\(reason)を検出 — アクセシビリティ権限が未許可のためクリックできません")
+            DebugFeed.shared.pushEvent(String(format: NSLocalizedString("%@を検出 — アクセシビリティ権限が未許可のためクリックできません", comment: "権限未許可時の通知"), reason))
             MMTLog.log("タップ成立(\(reason))したが権限未許可のためクリック送出せず")
             return
         }
         MMTLog.log("タップ成立(\(reason)) → クリック送出")
         SynthesizedClick.post(button: button)
-        DebugFeed.shared.pushEvent("タップ成立(\(reason))")
+        DebugFeed.shared.pushEvent(String(format: NSLocalizedString("タップ成立(%@)", comment: "タップ成立通知"), reason))
     }
 }

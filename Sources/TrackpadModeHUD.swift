@@ -66,7 +66,7 @@ private struct HUDView: View {
             Circle()
                 .fill(DS.Color.accent)
                 .frame(width: 8, height: 8)
-            Text("トラックパッドモード beta")
+            Text(NSLocalizedString("トラックパッドモード beta", comment: "トラックパッドモード中のHUD表示"))
                 .font(DS.Font.body)
                 .foregroundColor(DS.Color.labelPrimary)
         }

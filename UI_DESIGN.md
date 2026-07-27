@@ -1,5 +1,10 @@
 # Magic Mouse Toolkit UI/デザイン検討
 
+> **【失効】このドキュメントは 2026-07-02 時点の初期検討であり、現行実装には適用されない。**
+> 「macOS標準そのままの無装飾」「480×520pt」「Stitchで検討」といった方針は 2026-07-06 の
+> Liquid Glass 方針確定によりすべて廃止済み。**現行の正本は [DESIGN.md](./DESIGN.md) と
+> `Sources/DesignSystem.swift`。** 以下は経緯の記録としてのみ残す。
+
 作成日: 2026-07-02。[SPEC.md](./SPEC.md)の「設定UI」要件を具体化する。実装はSwiftUI(AppKit統合)、デザインはStitchで検討予定とのことなので、Stitch側の制作(DESIGN.md)に渡すための前提整理も兼ねる。
 
 ## デザイン方針

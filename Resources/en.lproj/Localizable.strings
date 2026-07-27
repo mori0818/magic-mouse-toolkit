@@ -1,0 +1,353 @@
+/* 秒数 */
+"%.2f秒" = "%.2f sec";
+
+/* 必要な間隔 */
+"%.2f秒以上あける" = "wait at least %.2f sec";
+
+/* 経過秒数 */
+"%.2f秒前" = "%.2f sec ago";
+
+/* 秒数 */
+"%.3f秒" = "%.3f sec";
+
+/* 経過秒数 */
+"%.3f秒前にUp" = "released %.3f sec ago";
+
+/* 権限未許可時の通知 */
+"%@を検出 — アクセシビリティ権限が未許可のためクリックできません" = "%@ detected — Accessibility permission not granted, cannot send clicks";
+
+/* ライブ表示: 判定内訳が空のときの表示 */
+"(まだ試行なし)" = "(No attempts yet)";
+
+/* 詳細設定キャプション */
+"0%=左端・手前(手首側)、100%=右端・先端(指先側)。「前後: 手前端」は上の「先端側の反応範囲」と連動します" = "0% = left/near edge (wrist side), 100% = right/fingertip edge. \"Front-back: near edge\" is linked to \"Fingertip-side zone\" above";
+
+/* タップ成立イベント種別 */
+"1本指タップ(右)" = "1-finger tap (right)";
+
+/* タップ成立イベント種別 */
+"1本指タップ(左)" = "1-finger tap (left)";
+
+/* メイン設定トグル */
+"1本指タップで左/右クリック" = "1-finger tap for left/right click";
+
+/* 詳細設定スライダーラベル */
+"2本指の同時判定時間" = "2-finger simultaneity window";
+
+/* メイン設定トグル */
+"2本指クリックでミドルクリック" = "2-finger click for middle click";
+
+/* タップ成立イベント種別 */
+"2本指タップ" = "2-finger tap";
+
+/* メイン設定トグル */
+"2本指タップで左クリック" = "2-finger tap for left click";
+
+/* タップ成立イベント種別 */
+"3本指" = "3 fingers";
+
+/* メイン設定トグル */
+"3本指ダブルタップで実行" = "Trigger with 3-finger double tap";
+
+/* メイン設定トグル */
+"3本指タップで実行" = "Trigger with 3-finger tap";
+
+/* メニューバー項目 */
+"Magic Mouse Toolkit について" = "About Magic Mouse Toolkit";
+
+/* 数値の上限 */
+"≤%.3f" = "≤%.3f";
+
+/* 秒数の上限 */
+"≤%.3f秒" = "≤%.3f sec";
+
+/* 数値の下限 */
+"≥%d" = "≥%d";
+
+/* 判定内訳の実測値
+   判定内訳の閾値 */
+"いいえ" = "No";
+
+/* 全設定リセットボタン */
+"すべての設定を既定値に戻す" = "Reset All Settings to Defaults";
+
+/* 詳細設定キャプション */
+"それぞれ右に動かすほど反応しやすくなります(最短接触フレーム数のみ左に動かすほど反応しやすい)。反応しやすいほどスクロールとの誤反応は増えます" = "Moving each slider right makes tap detection more sensitive (except Minimum Contact Frames, where left is more sensitive). Higher sensitivity increases false positives during scrolling";
+
+/* 判定内訳の実測値
+   判定内訳の閾値 */
+"なし" = "None";
+
+/* 判定内訳の実測値 */
+"はい" = "Yes";
+
+/* メニューバー項目 */
+"アクセシビリティ設定を開く…" = "Open Accessibility Settings…";
+
+/* カーソル速度ブーストのオフ表示 */
+"オフ" = "Off";
+
+/* 詳細設定セクション見出し */
+"カーソル速度ブースト" = "Cursor Speed Boost";
+
+/* マクロクリアボタン */
+"クリア" = "Clear";
+
+/* 詳細設定スライダーラベル */
+"クリック後の待ち時間" = "Post-click Cooldown";
+
+/* 詳細設定キャプション */
+"システム設定の上限(3.0)を超えてカーソルの軌跡速度を上げます。オフにする、またはアプリを終了すると元の速度に戻ります。システム設定の「マウス」を開くと一時的に上書きされることがあります" = "Boosts cursor tracking speed beyond the System Settings limit (3.0). Turning it off, or quitting the app, restores the original speed. Opening the \"Mouse\" pane in System Settings may temporarily override it";
+
+/* 判定内訳の実測値 */
+"スクロールなし" = "No scrolling";
+
+/* 詳細設定キャプション */
+"スクロールや物理クリックの直後は、この時間だけタップを無視して誤クリックを防ぎます。2本指の同時判定時間は、2本の指のタッチ開始がこの時間内に収まったとき2本指タップとみなす設定です" = "Right after scrolling or a physical click, taps are ignored for this duration to prevent accidental clicks. The 2-finger simultaneity window is how close together two fingers must start touching to count as a 2-finger tap";
+
+/* 詳細設定スライダーラベル */
+"スクロール後の待ち時間" = "Post-scroll Cooldown";
+
+/* 判定内訳ラベル */
+"スクロール直後でない" = "Not right after scrolling";
+
+/* タップ不成立理由: スクロール直後 */
+"スクロール直後のため無視" = "Ignored: right after scrolling";
+
+/* 詳細設定セクション見出し */
+"タップに反応する範囲" = "Tap Detection Zone";
+
+/* 詳細設定スライダーラベル */
+"タップの最長時間" = "Maximum Tap Duration";
+
+/* 詳細設定セクション見出し */
+"タップ判定のきびしさ" = "Tap Detection Strictness";
+
+/* リセットボタン */
+"タップ判定を初期設定に戻す" = "Reset Tap Detection to Defaults";
+
+/* ライブ表示カードの見出し */
+"タップ座標のライブ表示" = "Live Tap Coordinate Display";
+
+/* タップ成立通知 */
+"タップ成立(%@)" = "Tap recognized (%@)";
+
+/* メニューバー: デバイスステータス */
+"デバイス: %d台 検出%@" = "Device: %1$d found%2$@";
+
+/* メニューバー: デバイスステータス */
+"デバイス: 未検出 ✗（familyId: %@）" = "Device: not found ✗ (familyId: %@)";
+
+/* メニューバー: デバイスステータス初期表示 */
+"デバイス: 確認中…" = "Device: checking…";
+
+/* メニューバー項目 */
+"デバイスを再検出" = "Rediscover Devices";
+
+/* 詳細設定セクション見出し */
+"トラックパッドモード" = "Trackpad Mode";
+
+/* トラックパッドモード中のHUD表示 */
+"トラックパッドモード beta" = "Trackpad Mode beta";
+
+/* 3本指タップの割り当て種別 */
+"トラックパッドモード切替" = "Toggle Trackpad Mode";
+
+/* メニューバー: バッテリーステータス */
+"バッテリー: %d%%" = "Battery: %d%%";
+
+/* メニューバー: バッテリーステータス */
+"バッテリー: %d%% ⚠" = "Battery: %d%% ⚠";
+
+/* メニューバー: バッテリーステータス初期表示 */
+"バッテリー: 確認中…" = "Battery: checking…";
+
+/* 詳細設定キャプション */
+"マウス表面のなぞりをカーソル移動に変換する際の倍率です。3本指ダブルタップ、または下のボタンでモードのON/OFFを切り替えます" = "The multiplier used to convert swipes on the mouse surface into cursor movement. Toggle the mode on/off with a 3-finger double tap or the button below";
+
+/* 詳細設定キャプション */
+"マウス表面の先端(指先側)からこの割合までをタップに反応させます。初期値は25%です" = "Taps are recognized from the fingertip-side edge of the mouse surface up to this percentage. The default is 25%";
+
+/* 3本指タップの割り当て種別 */
+"マクロ" = "Macro";
+
+/* メニューバー: デバイスステータス補足 */
+"・フォールバック中" = " (fallback active)";
+
+/* トラックパッドモード切替ボタン */
+"今すぐOFFにする" = "Turn Off Now";
+
+/* トラックパッドモード切替ボタン */
+"今すぐONにする" = "Turn On Now";
+
+/* 判定内訳ラベル */
+"位置ズレ" = "Position Drift";
+
+/* タップ不成立理由: 位置ズレ超過 */
+"位置ズレが大きすぎたため無視" = "Ignored: position drift too large";
+
+/* 詳細設定スライダーラベル */
+"位置ズレの許容量" = "Position Drift Tolerance";
+
+/* 詳細設定スライダーラベル */
+"先端側の反応範囲" = "Fingertip-side Zone";
+
+/* 詳細設定スライダーラベル */
+"前後: 先端" = "Front-back: fingertip edge";
+
+/* 詳細設定スライダーラベル */
+"前後: 手前端" = "Front-back: near edge";
+
+/* 3本指タップの割り当て選択 */
+"割り当て" = "Assignment";
+
+/* タップ不成立理由: 速度超過 */
+"動きが速すぎたため無視" = "Ignored: movement too fast";
+
+/* 判定内訳ラベル */
+"動きの合計" = "Total Movement";
+
+/* タップ不成立理由: 移動量超過 */
+"動きの合計が大きすぎたため無視" = "Ignored: total movement too large";
+
+/* 詳細設定スライダーラベル */
+"動きの合計の許容量" = "Total Movement Tolerance";
+
+/* 判定内訳ラベル */
+"動きの速さ" = "Movement Speed";
+
+/* 詳細設定スライダーラベル */
+"動きの速さの許容量" = "Movement Speed Tolerance";
+
+/* タップ不成立理由: ゾーン外 */
+"反応範囲の外だったため無視" = "Ignored: outside detection zone";
+
+/* リセットボタン */
+"反応範囲を初期設定に戻す" = "Reset Detection Zone to Defaults";
+
+/* 判定内訳ラベル */
+"反応範囲内(開始点・3本指は全面)" = "Inside detection zone (start point; 3-finger covers full surface)";
+
+/* メイン設定ラベル */
+"右クリックの開始位置" = "Right-click Start Position";
+
+/* 座標(%) */
+"左から%.0f%%" = "%.0f%% from the left";
+
+/* 座標(%) */
+"左から%.0f%% 手前から%.0f%%" = "%1$.0f%% from the left, %2$.0f%% from the near edge";
+
+/* 反応範囲(%) */
+"左右%.0f-%.0f%% 前後%.0f-%.0f%%" = "Left-right %1$.0f-%2$.0f%%, front-back %3$.0f-%4$.0f%%";
+
+/* 詳細設定スライダーラベル */
+"左右: 右端" = "Left-right: right edge";
+
+/* 詳細設定スライダーラベル */
+"左右: 左端" = "Left-right: left edge";
+
+/* 判定内訳ラベル */
+"慣性スクロール中に開始" = "Started during momentum scroll";
+
+/* タップ不成立理由: 慣性スクロール中 */
+"慣性スクロール中のため無視" = "Ignored: during momentum scroll";
+
+/* 判定内訳の実測値 */
+"押下中" = "Held down";
+
+/* タップ不成立理由: 接触中の動き超過 */
+"指の動きが大きすぎたため無視" = "Ignored: finger movement too large";
+
+/* ライブ表示: 指の本数 */
+"指の本数：%d" = "Fingers: %d";
+
+/* タップ不成立理由: 接触フレーム不足 */
+"接触が短すぎたため無視" = "Ignored: contact too short";
+
+/* タップ不成立理由: 接触時間超過 */
+"接触が長すぎたため無視" = "Ignored: contact too long";
+
+/* 判定内訳ラベル */
+"接触フレーム数" = "Contact Frame Count";
+
+/* 判定内訳の実測値 */
+"接触中にスクロール" = "Scrolled during contact";
+
+/* 判定内訳ラベル */
+"接触中の動き超過" = "Movement during contact";
+
+/* 判定内訳ラベル */
+"接触時間" = "Contact Duration";
+
+/* 詳細設定スライダーラベル */
+"最短の接触フレーム数" = "Minimum Contact Frames";
+
+/* メニューバー項目: 有効トグル */
+"有効" = "Enabled";
+
+/* メイン設定トグル */
+"有効にする" = "Enable";
+
+/* メニューバー: 権限ステータス */
+"権限: 未許可 ✗（クリックが送出できません）" = "Permission: Not granted ✗ (clicks cannot be sent)";
+
+/* メニューバー: 権限ステータス初期表示 */
+"権限: 確認中…" = "Permission: checking…";
+
+/* メニューバー: 権限ステータス */
+"権限: 許可済み ✓" = "Permission: Granted ✓";
+
+/* 判定内訳ラベル */
+"物理クリック直後でない" = "Not right after a physical click";
+
+/* タップ不成立理由: 物理クリック直後 */
+"物理クリック直後のため無視" = "Ignored: right after a physical click";
+
+/* マクロ登録済み件数表示 */
+"登録済み：%dイベント" = "Saved: %d events";
+
+/* ライブ表示見出し */
+"直近のイベント" = "Recent Events";
+
+/* ライブ表示見出し */
+"直近のタップ試行の判定内訳" = "Latest Tap Attempt Breakdown";
+
+/* 詳細設定スライダーラベル */
+"移動ゲイン" = "Movement Gain";
+
+/* メニューバー項目 */
+"終了" = "Quit";
+
+/* メイン設定トグル */
+"縦方向のみにスクロール(横スクロール無効)" = "Scroll vertically only (disable horizontal scroll)";
+
+/* メニューバー項目 */
+"設定を開く…" = "Open Settings…";
+
+/* 詳細設定ページの見出し
+   詳細設定ページへの遷移ボタン */
+"詳細設定" = "Advanced Settings";
+
+/* 反応範囲の詳細表示トグル */
+"詳細設定を表示" = "Show Advanced Settings";
+
+/* 詳細設定セクション見出し */
+"誤反応の防止" = "False-positive Prevention";
+
+/* リセットボタン */
+"誤反応の防止を初期設定に戻す" = "Reset False-positive Prevention to Defaults";
+
+/* 判定内訳の実測値 */
+"超過あり" = "Exceeded";
+
+/* 詳細設定スライダーラベル */
+"軌跡の速さ" = "Tracking Speed";
+
+/* マクロ録画ボタン */
+"録画を停止して保存" = "Stop Recording & Save";
+
+/* マクロ録画ボタン */
+"録画を開始" = "Start Recording";
+
+/* マクロ録画中の件数表示 */
+"録画中… %dイベント" = "Recording… %d events";
