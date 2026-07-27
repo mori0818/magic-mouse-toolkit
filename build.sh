@@ -1,15 +1,15 @@
 #!/bin/bash
 # The direct swiftc/lipo build flow was informed by MouseToucher.
 # Copyright (c) 2025 Roger Hughes, used under the MIT License.
-# See THIRD_PARTY_NOTICES.md. Magic Control changes: GPL-3.0-only.
+# See THIRD_PARTY_NOTICES.md. Magic Mouse Toolkit changes: GPL-3.0-only.
 
 set -euo pipefail
 cd "$(dirname "$0")"
 
 export CLANG_MODULE_CACHE_PATH="$PWD/.build/module-cache"
 
-APP="Magic Control.app"
-BIN="MagicControl"
+APP="Magic Mouse Toolkit.app"
+BIN="MagicMouseToolkit"
 SIGN_ID="${SIGN_ID:-}"
 
 SWIFT_FILES=(Sources/*.swift)

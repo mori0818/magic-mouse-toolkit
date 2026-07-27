@@ -13,7 +13,7 @@ import Foundation
 /// メインスレッドへ dispatch する)。旧実装の Timer.scheduledTimer はメインRunLoopが
 /// 何らかの理由でブロックされると発火しなくなる弱点があったため置き換えた。
 enum PermissionMonitor {
-    private static let queue = DispatchQueue(label: "com.magiccontrol.permission.monitor", qos: .utility)
+    private static let queue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.permission.monitor", qos: .utility)
     private static var timer: DispatchSourceTimer?
 
     // 以下はすべてメインスレッド上でのみ読み書きする(コールバックは必ず main.async 経由)。

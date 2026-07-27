@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible problem with Magic Control
+description: Report a reproducible problem with Magic Mouse Toolkit
 title: "[Bug] "
 labels: ["bug"]
 body:
@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Before testing permission-related behavior, read `SAFETY.md`.
-        Do not toggle or reset Accessibility permissions while Magic Control is running.
+        Do not toggle or reset Accessibility permissions while Magic Mouse Toolkit is running.
   - type: input
     id: macos
     attributes:
@@ -45,12 +45,12 @@ body:
     id: logs
     attributes:
       label: Relevant logs
-      description: Remove personal information before pasting excerpts from MagicControl.log.
+      description: Remove personal information before pasting excerpts from MagicMouseToolkit.log.
       render: text
   - type: checkboxes
     id: safety
     attributes:
       label: Safety confirmation
       options:
-        - label: I did not toggle, remove, or reset Accessibility permissions while Magic Control was running.
+        - label: I did not toggle, remove, or reset Accessibility permissions while Magic Mouse Toolkit was running.
           required: true

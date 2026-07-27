@@ -1,6 +1,6 @@
 // The early tap-recognition design was informed by MouseToucher.
 // Copyright (c) 2025 Roger Hughes, used under the MIT License.
-// See THIRD_PARTY_NOTICES.md. Magic Control changes: GPL-3.0-only.
+// See THIRD_PARTY_NOTICES.md. Magic Mouse Toolkit changes: GPL-3.0-only.
 
 import Foundation
 

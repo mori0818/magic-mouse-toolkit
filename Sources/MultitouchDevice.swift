@@ -1,6 +1,6 @@
 // Device-enumeration foundations are derived from MouseToucher.
 // Copyright (c) 2025 Roger Hughes, used under the MIT License.
-// See THIRD_PARTY_NOTICES.md. Magic Control changes: GPL-3.0-only.
+// See THIRD_PARTY_NOTICES.md. Magic Mouse Toolkit changes: GPL-3.0-only.
 
 import AppKit
 import IOKit
@@ -72,7 +72,7 @@ final class MultitouchDeviceManager {
         var externalDevices: [MTDeviceRef] = []
         var builtInDevices: [MTDeviceRef] = []
 
-        MCLog.log("デバイス列挙開始: 合計\(count)台のマルチタッチデバイス")
+        MMTLog.log("デバイス列挙開始: 合計\(count)台のマルチタッチデバイス")
 
         for i in 0..<count {
             guard let raw = CFArrayGetValueAtIndex(list, i) else { continue }
@@ -82,7 +82,7 @@ final class MultitouchDeviceManager {
             let status = MTDeviceGetFamilyID(device, &familyId)
             let builtIn = MTDeviceIsBuiltIn(device)
             discoveredFamilyIDs.append(familyId)
-            MCLog.log("  デバイス[\(i)]: familyId=\(familyId) (status=\(status)) builtIn=\(builtIn)")
+            MMTLog.log("  デバイス[\(i)]: familyId=\(familyId) (status=\(status)) builtIn=\(builtIn)")
 
             if builtIn {
                 builtInDevices.append(device)
@@ -106,14 +106,14 @@ final class MultitouchDeviceManager {
             if matched.isEmpty && !externalDevices.isEmpty {
                 matched = externalDevices
                 usedFallbackFilter = true
-                MCLog.log("familyIdフィルタ(112/113)に一致なし。外部デバイス\(externalDevices.count)台にフォールバック")
+                MMTLog.log("familyIdフィルタ(112/113)に一致なし。外部デバイス\(externalDevices.count)台にフォールバック")
             }
         } else {
             matched = externalDevices
         }
 
         if matched.isEmpty {
-            MCLog.log("警告: 使用可能な外部マルチタッチデバイスなし。検出familyId: \(discoveredFamilyIDs)")
+            MMTLog.log("警告: 使用可能な外部マルチタッチデバイスなし。検出familyId: \(discoveredFamilyIDs)")
         }
 
         if builtInMonitorDevices.isEmpty {
@@ -123,7 +123,7 @@ final class MultitouchDeviceManager {
                 MTDeviceStart(device, 0)
             }
             builtInMonitorDevices = builtInDevices
-            MCLog.log("内蔵トラックパッド監視開始: \(builtInDevices.count)台（入力元判別のみ）")
+            MMTLog.log("内蔵トラックパッド監視開始: \(builtInDevices.count)台（入力元判別のみ）")
         }
 
         for device in matched {
@@ -137,7 +137,7 @@ final class MultitouchDeviceManager {
             MTDeviceStart(device, 0)
         }
         activeDevices = matched
-        MCLog.log("タッチ監視開始: \(matched.count)台")
+        MMTLog.log("タッチ監視開始: \(matched.count)台")
     }
 
     func stop() {
@@ -155,14 +155,14 @@ final class MultitouchDeviceManager {
         }
         SharedState.shared.builtInTrackpadFingerCount = 0
         SharedState.shared.builtInTrackpadLastFrameAt = -1e9
-        MCLog.log("タッチ監視停止: \(devices.count)台を解放")
+        MMTLog.log("タッチ監視停止: \(devices.count)台を解放")
     }
 
     /// デバイスを再検出する。スリープ復帰直後は Magic Mouse の Bluetooth 再接続が
     /// 数秒〜十数秒遅れるため、一度の列挙で外部デバイスが見つからなくても
     /// 2秒間隔で最大30秒リトライする（一発列挙で0台のまま死ぬバグの修正）。
     func restart() {
-        MCLog.log("デバイス再検出")
+        MMTLog.log("デバイス再検出")
         retryGeneration += 1
         let generation = retryGeneration
         stop()
@@ -176,7 +176,7 @@ final class MultitouchDeviceManager {
         start()
         if activeDeviceCount > 0 { return }
         guard attempt < maxRetries else {
-            MCLog.log("デバイス再検出: \(maxRetries)回試行しても外部デバイスなし。接続通知を待ちます")
+            MMTLog.log("デバイス再検出: \(maxRetries)回試行しても外部デバイスなし。接続通知を待ちます")
             return
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + retryInterval) { [weak self] in
@@ -192,7 +192,7 @@ final class MultitouchDeviceManager {
     func startHotplugMonitoring() {
         guard ioNotifyPort == nil else { return }
         guard let port = IONotificationPortCreate(kIOMainPortDefault) else {
-            MCLog.log("警告: IONotificationPort の作成に失敗（着脱監視なしで継続）")
+            MMTLog.log("警告: IONotificationPort の作成に失敗（着脱監視なしで継続）")
             return
         }
         ioNotifyPort = port
@@ -212,14 +212,14 @@ final class MultitouchDeviceManager {
             &ioMatchIterator
         )
         guard result == KERN_SUCCESS else {
-            MCLog.log("警告: デバイス着脱通知の登録に失敗 (\(result))")
+            MMTLog.log("警告: デバイス着脱通知の登録に失敗 (\(result))")
             IONotificationPortDestroy(port)
             ioNotifyPort = nil
             return
         }
         // 通知を有効化するには初回に iterator を空にする必要がある（既存デバイスが列挙される）
         drainIterator(ioMatchIterator)
-        MCLog.log("デバイス着脱監視を開始 (AppleMultitouchDevice)")
+        MMTLog.log("デバイス着脱監視を開始 (AppleMultitouchDevice)")
     }
 
     func stopHotplugMonitoring() {
@@ -237,7 +237,7 @@ final class MultitouchDeviceManager {
         drainIterator(iterator)
         // MultitouchSupport 側の登録が落ち着くまで少し待ってから再検出する。
         // restart() 側の世代管理により、通知が連続しても最後の1回だけが生き残る。
-        MCLog.log("マルチタッチデバイスの接続を検知")
+        MMTLog.log("マルチタッチデバイスの接続を検知")
         restart()
     }
 

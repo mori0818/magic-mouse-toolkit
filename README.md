@@ -1,6 +1,6 @@
-# Magic Control
+# Magic Mouse Toolkit
 
-Magic Control is an open-source macOS utility that adds configurable gestures
+Magic Mouse Toolkit is an open-source macOS utility that adds configurable gestures
 and a virtual trackpad mode to Apple Magic Mouse.
 
 現在は日本語UIです。英語UIを含むローカライズ基盤は公開後の開発項目です。
@@ -31,10 +31,10 @@ and a virtual trackpad mode to Apple Magic Mouse.
 
 ## Safety
 
-**Magic Controlの実行中に、システム設定からアクセシビリティ権限をOFF・削除しないでください。**
+**Magic Mouse Toolkitの実行中に、システム設定からアクセシビリティ権限をOFF・削除しないでください。**
 
 CGEventTapを使用するアプリの実行中に権限を変更すると、macOSのシステム入力が停止する場合があります。
-権限を変更する必要がある場合は、先にメニューバーからMagic Controlを通常終了してください。
+権限を変更する必要がある場合は、先にメニューバーからMagic Mouse Toolkitを通常終了してください。
 `tccutil reset`は通常のセットアップやトラブルシューティングでは使用しないでください。
 
 詳しくは[SAFETY.md](./SAFETY.md)を参照してください。
@@ -42,10 +42,10 @@ CGEventTapを使用するアプリの実行中に権限を変更すると、macO
 ## Build
 
 ```sh
-git clone <repository-url>
-cd magic-control
+git clone https://github.com/mori0818/magic-mouse-toolkit.git
+cd magic-mouse-toolkit
 ./build.sh
-open "build/Magic Control.app"
+open "build/Magic Mouse Toolkit.app"
 ```
 
 `SIGN_ID`を指定しない場合はad-hoc署名を使用します。
@@ -64,13 +64,13 @@ SIGN_ID="Developer ID Application: Example (TEAMID)" ./build.sh
 - マクロ録画中は、キーボードのキーコード・修飾キー・押下状態・タイミングを端末内の
   UserDefaultsへ保存します。文字列や入力内容を外部へ送信しません。
 - パスワードや秘密情報を入力している間はマクロを録画しないでください。
-- 診断ログは`~/Library/Logs/MagicControl.log`へ保存され、約1 MiBでローテーションします。
+- 診断ログは`~/Library/Logs/MagicMouseToolkit.log`へ保存され、約1 MiBでローテーションします。
   ログにはジェスチャー判定や座標などの操作メタデータが含まれる場合があります。
 
 ## System-wide settings
 
 カーソル速度ブーストは、システム全体の`HIDMouseAcceleration`を一時的に変更します。
-通常終了時には元の値へ戻しますが、強制終了後に速度が残った場合は、Magic Controlを
+通常終了時には元の値へ戻しますが、強制終了後に速度が残った場合は、Magic Mouse Toolkitを
 終了してから「システム設定 → マウス → 軌跡の速さ」を動かして復旧してください。
 
 ## Documentation
@@ -86,11 +86,11 @@ SIGN_ID="Developer ID Application: Example (TEAMID)" ./build.sh
 
 ## Third-party work
 
-Magic ControlはMouseToucherのMITライセンス対象コードと設計を起点の一部として利用し、
+Magic Mouse ToolkitはMouseToucherのMITライセンス対象コードと設計を起点の一部として利用し、
 MiddleClickのGPL-3.0実装を参考・改変しています。由来とライセンス全文は
 [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)を参照してください。
 
 ## License
 
-Magic Control is licensed under the GNU General Public License v3.0 only.
+Magic Mouse Toolkit is licensed under the GNU General Public License v3.0 only.
 See [LICENSE](./LICENSE).

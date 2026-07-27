@@ -1,18 +1,18 @@
 import Foundation
 
 /// ファイルベースの診断ログ。unified log では NSLog の内容が <private> に秘匿されて
-/// 外部から読めないため、~/Library/Logs/MagicControl.log にも平文で書き出す。
-enum MCLog {
+/// 外部から読めないため、~/Library/Logs/MagicMouseToolkit.log にも平文で書き出す。
+enum MMTLog {
     private static let maxFileSize: UInt64 = 1_048_576
 
     private static let url: URL = {
         let dir = FileManager.default.urls(for: .libraryDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Logs", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        return dir.appendingPathComponent("MagicControl.log")
+        return dir.appendingPathComponent("MagicMouseToolkit.log")
     }()
 
-    private static let queue = DispatchQueue(label: "com.magiccontrol.log", qos: .utility)
+    private static let queue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.log", qos: .utility)
 
     private static let formatter: DateFormatter = {
         let f = DateFormatter()
@@ -21,7 +21,7 @@ enum MCLog {
     }()
 
     static func log(_ message: String) {
-        NSLog("[MagicControl] %@", message)
+        NSLog("[MagicMouseToolkit] %@", message)
         let line = "\(formatter.string(from: Date())) \(message)\n"
         queue.async {
             guard let data = line.data(using: .utf8) else { return }

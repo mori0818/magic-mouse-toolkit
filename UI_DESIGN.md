@@ -1,4 +1,4 @@
-# Magic Control UI/デザイン検討
+# Magic Mouse Toolkit UI/デザイン検討
 
 作成日: 2026-07-02。[SPEC.md](./SPEC.md)の「設定UI」要件を具体化する。実装はSwiftUI(AppKit統合)、デザインはStitchで検討予定とのことなので、Stitch側の制作(DESIGN.md)に渡すための前提整理も兼ねる。
 
@@ -32,7 +32,7 @@
 
 ```
 ┌─────────────────────────────────┐
-│  Magic Control 設定              │
+│  Magic Mouse Toolkit 設定              │
 ├─────────────────────────────────┤
 │  ○ 有効にする              [Toggle]│
 │                                   │

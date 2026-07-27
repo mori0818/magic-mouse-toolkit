@@ -1,5 +1,5 @@
 // The middle-click event transformation is adapted from MiddleClick (GPL-3.0).
-// See THIRD_PARTY_NOTICES.md. Magic Control is licensed under GPL-3.0-only.
+// See THIRD_PARTY_NOTICES.md. Magic Mouse Toolkit is licensed under GPL-3.0-only.
 
 import CoreGraphics
 import QuartzCore
@@ -61,7 +61,7 @@ final class EventInterceptor {
             callback: eventInterceptorCallback,
             userInfo: nil
         ) else {
-            MCLog.log("イベントタップ作成失敗(アクセシビリティ権限を確認)")
+            MMTLog.log("イベントタップ作成失敗(アクセシビリティ権限を確認)")
             return
         }
 
@@ -69,7 +69,7 @@ final class EventInterceptor {
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
-        MCLog.log("イベントタップ作成成功(クリック監視・ミドルクリック変換が有効)")
+        MMTLog.log("イベントタップ作成成功(クリック監視・ミドルクリック変換が有効)")
 
         updateEnabledState()
     }
@@ -115,7 +115,7 @@ final class EventInterceptor {
             shared.trackpadScrollOwner = 0
         }
         CGEvent.tapEnable(tap: tap, enable: enabled)
-        MCLog.log("イベントタップ: \(enabled ? "有効化" : "無効化")")
+        MMTLog.log("イベントタップ: \(enabled ? "有効化" : "無効化")")
     }
 
     fileprivate func handle(type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
@@ -130,7 +130,7 @@ final class EventInterceptor {
         // システム設定でユーザーがアクセシビリティ/入力監視をOFFにした場合。
         // 実機検証では、権限剥奪と同時にこのタップへのイベント配送自体が止まり、
         // このイベントがコールバックに配送されないことが確認されている
-        // (~/Library/Logs/MagicControl.log に復旧ログが一切残らなかった)。
+        // (~/Library/Logs/MagicMouseToolkit.log に復旧ログが一切残らなかった)。
         // つまりここで何をしても頼りにできない。絶対に tapEnable(true) は呼ばない
         // (呼んでも意味が無い上、万一配送された場合に同期ループの引き金になりうる)。
         // 権限喪失の検知と復旧は PermissionMonitor が別経路(ポーリング)で行う。
@@ -210,7 +210,7 @@ final class EventInterceptor {
 
         case .leftMouseDown:
             if event.getIntegerValueField(.eventSourceUserData) == SynthesizedClick.signature {
-                MCLog.log("[診断] 合成leftMouseDownがHIDタップを通過(注入成功)")
+                MMTLog.log("[診断] 合成leftMouseDownがHIDタップを通過(注入成功)")
                 return Unmanaged.passUnretained(event)
             }
             shared.buttonDown = true

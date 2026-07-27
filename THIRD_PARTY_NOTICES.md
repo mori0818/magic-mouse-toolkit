@@ -1,6 +1,6 @@
 # Third-party notices
 
-Magic Control contains or is derived from ideas and portions of the following
+Magic Mouse Toolkit contains or is derived from ideas and portions of the following
 open-source projects.
 
 ## MouseToucher
@@ -14,12 +14,12 @@ Copyright (c) 2025 Roger Hughes
 MouseToucher was used as the starting point for parts of the private
 MultitouchSupport bridge declarations, device enumeration approach, direct
 `swiftc`/`lipo` build flow, permission setup, and the early tap-recognition
-prototype. Magic Control has substantially restructured and extended these
+prototype. Magic Mouse Toolkit has substantially restructured and extended these
 areas, but retains this notice because the provenance is material.
 
 Current provenance by area:
 
-| Magic Control area | MouseToucher relationship | Current state |
+| Magic Mouse Toolkit area | MouseToucher relationship | Current state |
 |---|---|---|
 | `Sources/MultitouchBridge.h` | API declarations and touch-structure layout derived from the MouseToucher bridge | Renamed, corrected, reduced, and extended with family ID and IOHID SPI declarations |
 | `Sources/MultitouchDevice.swift` | External-device enumeration and built-in-device filtering originated in MouseToucher | Reworked with family filtering, retain/release, sleep handling, reconnect retries, IOKit notifications, and source separation |
@@ -30,7 +30,7 @@ Current provenance by area:
 | `Info.plist` / `main.swift` | Standard macOS app-bundle boilerplate follows the same shape | Product-specific identifiers and current deployment target |
 
 A source comparison against MouseToucher `main` at commit `edc96506` found no
-large unchanged Swift implementation block in the current Magic Control tree.
+large unchanged Swift implementation block in the current Magic Mouse Toolkit tree.
 The remaining relationship is best described as limited direct textual reuse
 plus material architectural and prototype provenance. It is intentionally
 credited rather than minimized.
@@ -63,7 +63,7 @@ License: GNU General Public License v3.0
 
 MiddleClick informed the CGEventTap approach used to transform a physical
 mouse click into a middle click and was quoted in early architecture
-documentation. Magic Control is distributed under GPL-3.0-only so that the
+documentation. Magic Mouse Toolkit is distributed under GPL-3.0-only so that the
 license remains compatible with this provenance. The GPL text is included in
 [LICENSE](./LICENSE).
 

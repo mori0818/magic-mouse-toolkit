@@ -1,15 +1,15 @@
 # Safety
 
-Magic Controlは、システム全体の入力を監視・変換するCGEventTapと、Appleの非公開
+Magic Mouse Toolkitは、システム全体の入力を監視・変換するCGEventTapと、Appleの非公開
 MultitouchSupport APIを使用します。通常利用では実機確認済みですが、権限やプロセスを
 強制的に変更する操作には注意が必要です。
 
 ## アクセシビリティ権限
 
-Magic Controlの実行中に、次の操作をしないでください。
+Magic Mouse Toolkitの実行中に、次の操作をしないでください。
 
-- システム設定でMagic Controlのアクセシビリティ権限をOFFにする
-- アクセシビリティ一覧からMagic Controlを削除する
+- システム設定でMagic Mouse Toolkitのアクセシビリティ権限をOFFにする
+- アクセシビリティ一覧からMagic Mouse Toolkitを削除する
 - `tccutil reset`で権限をリセットする
 - 権限を短時間に何度もON／OFFする
 
@@ -18,12 +18,12 @@ CGEventTapを持つアプリの実行中に権限を剥奪すると、macOS側�
 
 権限を変更する場合:
 
-1. メニューバーからMagic Controlを通常終了する
-2. Activity Monitorで`MagicControl`が終了したことを確認する
+1. メニューバーからMagic Mouse Toolkitを通常終了する
+2. Activity Monitorで`MagicMouseToolkit`が終了したことを確認する
 3. システム設定で権限を変更する
-4. Magic Controlを起動する
+4. Magic Mouse Toolkitを起動する
 
-入力が反応しなくなった場合は、別の利用可能な入力経路からMagic Controlを終了してください。
+入力が反応しなくなった場合は、別の利用可能な入力経路からMagic Mouse Toolkitを終了してください。
 それでも復旧しない場合はmacOSを再起動してください。
 
 ## カーソル速度
@@ -33,9 +33,9 @@ CGEventTapを持つアプリの実行中に権限を剥奪すると、macOS側�
 
 強制終了後に速度が残った場合:
 
-1. Magic Controlを終了する
+1. Magic Mouse Toolkitを終了する
 2. 「システム設定 → マウス → 軌跡の速さ」を一度動かす
-3. 必要ならMagic Controlの速度ブーストをOFFにして再起動する
+3. 必要ならMagic Mouse Toolkitの速度ブーストをOFFにして再起動する
 
 ## マクロ録画
 

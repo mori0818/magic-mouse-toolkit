@@ -1,4 +1,4 @@
-# Magic Control 仕様書
+# Magic Mouse Toolkit 仕様書
 
 ## 背景・目的
 

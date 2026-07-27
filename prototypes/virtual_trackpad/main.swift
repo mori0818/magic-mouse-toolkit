@@ -5,7 +5,7 @@ import os
 
 // Step 4: TapRecognizer(本体 Sources/TapRecognizer.swift + Settings.swift のデフォルト閾値)
 // を流用したタップ→クリック判定を追加。ドラッグ(タップ&ホールド)はフェーズ2で対象外。
-// 安全プロトコル(手順書 magic-control-仮想トラックパッド実装手順.md 準拠)を引き続き厳守:
+// 安全プロトコル(手順書 magic-mouse-toolkit-仮想トラックパッド実装手順.md 準拠)を引き続き厳守:
 //   - 自動タイムアウト必須(既定60秒、引数で延長しても120秒でクランプ)
 //   - killタイマーを事前アームしてから起動すること(このプログラム自体は行わない)
 //   - TCC権限のON/OFFは絶対に試さない
@@ -318,7 +318,7 @@ startDevices()
 startScrollSuppression()
 
 // mouseMoved のドレイン専用タイマー(120Hz、専用シリアルキュー)
-let drainQueue = DispatchQueue(label: "com.magiccontrol.virtualpad.drain")
+let drainQueue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.virtualpad.drain")
 let drainTimer = DispatchSource.makeTimerSource(queue: drainQueue)
 drainTimer.schedule(deadline: .now(), repeating: 1.0 / 120.0)
 drainTimer.setEventHandler { drainAndPost() }

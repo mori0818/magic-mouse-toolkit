@@ -1,4 +1,4 @@
-# Magic Control デザインシステム（DESIGN.md)
+# Magic Mouse Toolkit デザインシステム（DESIGN.md)
 
 作成日: 2026-07-02。プロトタイプ（フェーズ1）から最終 Liquid Glass デザイン（フェーズ2）まで一貫して使うデザインシステム。**ビューに直値を書かず、必ず `DesignSystem.swift` のトークンを経由する**。これによりフェーズ2の再スキンはトークン値の差し替えだけで完了する。
 

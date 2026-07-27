@@ -3,7 +3,7 @@ import Darwin
 import CoreGraphics
 
 extension Notification.Name {
-    static let settingsChanged = Notification.Name("com.magiccontrol.settingsChanged")
+    static let settingsChanged = Notification.Name("com.mori0818.magicmousetoolkit.settingsChanged")
 }
 
 /// コールバックスレッドから安全に読める、設定値のイミュータブルなスナップショット。
@@ -49,35 +49,35 @@ final class AppSettings {
 
     /// SettingsView の @AppStorage から同一キーを参照するため internal（モジュール内共有）にする。
     enum Key {
-        static let enabled = "mc.enabled"
-        static let oneFingerTapEnabled = "mc.tap1.enabled"
-        static let twoFingerTapEnabled = "mc.tap2.enabled"
-        static let threeFingerTapEnabled = "mc.tap3.enabled"
-        static let threeFingerTapAction = "mc.tap3.action"
-        static let middleClickEnabled = "mc.middle.enabled"
-        static let verticalScrollOnly = "mc.scroll.verticalOnly"
+        static let enabled = "mmt.enabled"
+        static let oneFingerTapEnabled = "mmt.tap1.enabled"
+        static let twoFingerTapEnabled = "mmt.tap2.enabled"
+        static let threeFingerTapEnabled = "mmt.tap3.enabled"
+        static let threeFingerTapAction = "mmt.tap3.action"
+        static let middleClickEnabled = "mmt.middle.enabled"
+        static let verticalScrollOnly = "mmt.scroll.verticalOnly"
 
-        static let rightZoneMinX = "mc.zone.rightMinX"
-        static let zoneMinX = "mc.zone.minX"
-        static let zoneMaxX = "mc.zone.maxX"
-        static let zoneMinY = "mc.zone.minY"
-        static let zoneMaxY = "mc.zone.maxY"
+        static let rightZoneMinX = "mmt.zone.rightMinX"
+        static let zoneMinX = "mmt.zone.minX"
+        static let zoneMaxX = "mmt.zone.maxX"
+        static let zoneMinY = "mmt.zone.minY"
+        static let zoneMaxY = "mmt.zone.maxY"
 
-        static let tapMaxDuration = "mc.tap.maxDuration"
-        static let tapMaxStraightDistance = "mc.tap.maxStraight"
-        static let tapMaxPathLength = "mc.tap.maxPath"
-        static let tapMaxVelocity = "mc.tap.maxVelocity"
-        static let tapMinFrames = "mc.tap.minFrames"
+        static let tapMaxDuration = "mmt.tap.maxDuration"
+        static let tapMaxStraightDistance = "mmt.tap.maxStraight"
+        static let tapMaxPathLength = "mmt.tap.maxPath"
+        static let tapMaxVelocity = "mmt.tap.maxVelocity"
+        static let tapMinFrames = "mmt.tap.minFrames"
 
-        static let scrollVetoWindow = "mc.veto.scroll"
-        static let buttonVetoWindow = "mc.veto.button"
-        static let twoFingerSyncWindow = "mc.tap2.syncWindow"
+        static let scrollVetoWindow = "mmt.veto.scroll"
+        static let buttonVetoWindow = "mmt.veto.button"
+        static let twoFingerSyncWindow = "mmt.tap2.syncWindow"
 
-        static let deviceFilterStrict = "mc.device.strict"
+        static let deviceFilterStrict = "mmt.device.strict"
 
-        static let pointerSpeedBoost = "mc.pointer.speedBoost"
+        static let pointerSpeedBoost = "mmt.pointer.speedBoost"
 
-        static let trackpadModeGain = "mc.trackpad.gain"
+        static let trackpadModeGain = "mmt.trackpad.gain"
     }
 
     /// 3本指タップの既定アクション: 未録画の空マクロ。ユーザーが設定画面で録画するまで何も起きない。

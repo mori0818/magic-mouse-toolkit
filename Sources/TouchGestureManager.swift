@@ -1,6 +1,6 @@
 // The early tap-recognition prototype was informed by MouseToucher.
 // Copyright (c) 2025 Roger Hughes, used under the MIT License.
-// See THIRD_PARTY_NOTICES.md. Magic Control changes: GPL-3.0-only.
+// See THIRD_PARTY_NOTICES.md. Magic Mouse Toolkit changes: GPL-3.0-only.
 
 import Foundation
 import Darwin
@@ -169,7 +169,7 @@ final class DebugFeed: ObservableObject {
 final class TouchGestureManager {
     static let shared = TouchGestureManager()
 
-    private let queue = DispatchQueue(label: "com.magiccontrol.touch.pending")
+    private let queue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.touch.pending")
     private var activeTouches: [Int32: TouchTrack] = [:]
 
     // 同時タップ判定用の保留グループ（2本指・3本指共通、専用タイマー1本を使い回す）。
@@ -275,7 +275,7 @@ final class TouchGestureManager {
         guard evaluation.passed else {
             if let reason = evaluation.firstFailure {
                 DebugFeed.shared.pushEvent(reason.rawValue)
-                MCLog.log("[診断] タップ不成立 id=\(track.id): \(reason.rawValue)")
+                MMTLog.log("[診断] タップ不成立 id=\(track.id): \(reason.rawValue)")
             }
             return
         }
@@ -320,7 +320,7 @@ final class TouchGestureManager {
         let releaseTime = pendingGroupLatestReleaseTime
         pendingGroup = []
         cancelPendingTimer()
-        MCLog.log("[診断] グループ確定: \(group.count)本 inZone=\(group.map(\.inZone))")
+        MMTLog.log("[診断] グループ確定: \(group.count)本 inZone=\(group.map(\.inZone))")
 
         // ゾーン要求は本数確定後のここで課す。3本指以上は全面を対象とする
         // (指の本数自体が意図表明であり、ゾーン必須にすると3本を範囲内に収める操作が非現実的なため)
@@ -340,7 +340,7 @@ final class TouchGestureManager {
             fireClick(button: .left, reason: "2本指タップ")
         default:
             guard settings.threeFingerTapEnabled else {
-                MCLog.log("[診断] 3本指: threeFingerTapEnabled=false のため不発")
+                MMTLog.log("[診断] 3本指: threeFingerTapEnabled=false のため不発")
                 return
             }
             if settings.threeFingerTapAction.isTrackpadToggle {
@@ -348,11 +348,11 @@ final class TouchGestureManager {
                     lastThreeFingerToggleTapAt = -1e9
                 } else {
                     lastThreeFingerToggleTapAt = releaseTime
-                    MCLog.log("[診断] 3本指ダブルタップ: 1打目")
+                    MMTLog.log("[診断] 3本指ダブルタップ: 1打目")
                     return
                 }
             }
-            MCLog.log("[診断] 3本指: アクション実行 \(settings.threeFingerTapAction)")
+            MMTLog.log("[診断] 3本指: アクション実行 \(settings.threeFingerTapAction)")
             ActionExecutor.perform(settings.threeFingerTapAction)
             DebugFeed.shared.pushEvent("タップ成立(3本指)")
         }
@@ -364,7 +364,7 @@ final class TouchGestureManager {
 
     private func fireOneFingerTap(track: TouchTrack, settings: SettingsSnapshot) {
         guard settings.oneFingerTapEnabled else {
-            MCLog.log("[診断] 1本指: oneFingerTapEnabled=false のため不発")
+            MMTLog.log("[診断] 1本指: oneFingerTapEnabled=false のため不発")
             return
         }
         if Double(track.lastPos.x) > settings.rightZoneMinX {
@@ -377,10 +377,10 @@ final class TouchGestureManager {
     private func fireClick(button: SynthesizedClick.Button, reason: String) {
         guard SharedState.shared.accessibilityGranted else {
             DebugFeed.shared.pushEvent("\(reason)を検出 — アクセシビリティ権限が未許可のためクリックできません")
-            MCLog.log("タップ成立(\(reason))したが権限未許可のためクリック送出せず")
+            MMTLog.log("タップ成立(\(reason))したが権限未許可のためクリック送出せず")
             return
         }
-        MCLog.log("タップ成立(\(reason)) → クリック送出")
+        MMTLog.log("タップ成立(\(reason)) → クリック送出")
         SynthesizedClick.post(button: button)
         DebugFeed.shared.pushEvent("タップ成立(\(reason))")
     }

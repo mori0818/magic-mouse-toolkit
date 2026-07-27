@@ -1,4 +1,4 @@
-# Magic Control 実装仕様書（コード直結版）
+# Magic Mouse Toolkit 実装仕様書（コード直結版）
 
 作成日: 2026-07-02。この文書だけを見て実装を完了できることを目標とする（実装担当: Sonnet 5 想定）。
 背景・経緯は SPEC.md / ARCHITECTURE.md、デザイントークンは DESIGN.md を参照。
@@ -40,10 +40,10 @@
 ## 2. プロジェクト構成
 
 ```
-MagicControl/
+MagicMouseToolkit/
 ├── build.sh
 ├── Info.plist
-├── MagicControl.entitlements    （使わない。ad-hoc配布・App Sandbox無し）
+├── MagicMouseToolkit.entitlements    （使わない。ad-hoc配布・App Sandbox無し）
 ├── Sources/
 │   ├── main.swift
 │   ├── AppDelegate.swift
@@ -70,8 +70,8 @@ MagicControl/
 #!/bin/bash
 set -euo pipefail
 cd "$(dirname "$0")"
-APP="Magic Control.app"
-BIN="MagicControl"
+APP="Magic Mouse Toolkit.app"
+BIN="MagicMouseToolkit"
 SIGN_ID="${SIGN_ID:-}"              # 未指定ならad-hoc署名
 
 SWIFT_FILES=(Sources/*.swift)
@@ -93,14 +93,14 @@ codesign --force --sign "$SIGN_ID" "build/$APP"
 echo "Built: build/$APP"
 ```
 - 環境変数 `CLANG_MODULE_CACHE_PATH="$PWD/.build/module-cache"` を build.sh 冒頭で export する（CLAUDE.md 既定）
-- 動作確認は必ず `open -a "build/Magic Control.app"`（launchd 親）で行う。ターミナル直接実行では TCC が効かない
+- 動作確認は必ず `open -a "build/Magic Mouse Toolkit.app"`（launchd 親）で行う。ターミナル直接実行では TCC が効かない
 
 ### Info.plist（必須キー）
 | キー | 値 |
 |---|---|
-| CFBundleIdentifier | com.magiccontrol.app |
-| CFBundleName / CFBundleDisplayName | Magic Control |
-| CFBundleExecutable | MagicControl |
+| CFBundleIdentifier | com.mori0818.magicmousetoolkit |
+| CFBundleName / CFBundleDisplayName | Magic Mouse Toolkit |
+| CFBundleExecutable | MagicMouseToolkit |
 | CFBundleVersion / ShortVersionString | 1.0 |
 | LSUIElement | true |
 | NSHighResolutionCapable | true |
@@ -171,22 +171,22 @@ final class MultitouchDeviceManager {
 
 | プロパティ | UserDefaults キー | 型 | 既定値 | UI範囲 |
 |---|---|---|---|---|
-| enabled | mc.enabled | Bool | true | — |
-| oneFingerTapEnabled | mc.tap1.enabled | Bool | true | — |
-| twoFingerTapEnabled | mc.tap2.enabled | Bool | true | — |
-| middleClickEnabled | mc.middle.enabled | Bool | true | — |
-| rightZoneMinX | mc.zone.rightMinX | Double | 0.6 | 0–1 |
-| zoneMinX / zoneMaxX | mc.zone.minX / maxX | Double | 0.0 / 1.0 | 0–1 |
-| zoneMinY / zoneMaxY | mc.zone.minY / maxY | Double | 0.0 / 1.0 | 0–1 |
-| tapMaxDuration | mc.tap.maxDuration | Double | 0.16 | 0.05–0.5 s |
-| tapMaxStraightDistance | mc.tap.maxStraight | Double | 0.09 | 0.01–0.3 |
-| tapMaxPathLength | mc.tap.maxPath | Double | 0.07 | 0.01–0.3 |
-| tapMaxVelocity | mc.tap.maxVelocity | Double | 1.5 | 0.2–8.0 /s |
-| tapMinFrames | mc.tap.minFrames | Int | 3 | 1–10 |
-| scrollVetoWindow | mc.veto.scroll | Double | 0.25 | 0–1.0 s |
-| buttonVetoWindow | mc.veto.button | Double | 0.10 | 0–0.5 s |
-| twoFingerSyncWindow | mc.tap2.syncWindow | Double | 0.06 | 0.02–0.2 s |
-| deviceFilterStrict | mc.device.strict | Bool | true | — |
+| enabled | mmt.enabled | Bool | true | — |
+| oneFingerTapEnabled | mmt.tap1.enabled | Bool | true | — |
+| twoFingerTapEnabled | mmt.tap2.enabled | Bool | true | — |
+| middleClickEnabled | mmt.middle.enabled | Bool | true | — |
+| rightZoneMinX | mmt.zone.rightMinX | Double | 0.6 | 0–1 |
+| zoneMinX / zoneMaxX | mmt.zone.minX / maxX | Double | 0.0 / 1.0 | 0–1 |
+| zoneMinY / zoneMaxY | mmt.zone.minY / maxY | Double | 0.0 / 1.0 | 0–1 |
+| tapMaxDuration | mmt.tap.maxDuration | Double | 0.16 | 0.05–0.5 s |
+| tapMaxStraightDistance | mmt.tap.maxStraight | Double | 0.09 | 0.01–0.3 |
+| tapMaxPathLength | mmt.tap.maxPath | Double | 0.07 | 0.01–0.3 |
+| tapMaxVelocity | mmt.tap.maxVelocity | Double | 1.5 | 0.2–8.0 /s |
+| tapMinFrames | mmt.tap.minFrames | Int | 3 | 1–10 |
+| scrollVetoWindow | mmt.veto.scroll | Double | 0.25 | 0–1.0 s |
+| buttonVetoWindow | mmt.veto.button | Double | 0.10 | 0–0.5 s |
+| twoFingerSyncWindow | mmt.tap2.syncWindow | Double | 0.06 | 0.02–0.2 s |
+| deviceFilterStrict | mmt.device.strict | Bool | true | — |
 
 - `tapMaxVelocity` の既定 1.5 は暫定値。デバッグ表示でのキャリブレーション対象（§9）
 - 初期値登録は `UserDefaults.standard.register(defaults:)` で起動時に行う
@@ -334,7 +334,7 @@ DESIGN.md のトークン（`DesignSystem.swift`）のみを使って構築す�
 設定を開く…
 デバイスを再検出            （MultitouchDeviceManager.restart）
 ──────────
-Magic Control について
+Magic Mouse Toolkit について
 終了 ⌘Q
 ```
 アイコン: SF Symbols `computermouse.fill`（template image）。設定ウィンドウは lazy 生成・closeで解放（`NSWindow.isReleasedWhenClosed` は SwiftUI ホスティングと相性が悪いので false にし、参照を nil 代入で解放）。
@@ -370,11 +370,11 @@ Magic Control について
 ## 13. フェーズ2への引き継ぎポイント
 
 - 見た目の変更は `DesignSystem.swift` のトークン値変更 + `GlassWindow.swift` 追加（borderless NSWindow サブクラス）に閉じる。SettingsView のレイアウト構造は再利用
-- Liquid Glass 検証: `.glassEffect()` を borderless 透明ウィンドウで単体検証してから統合（Vault の仕様書v2 難所#6/#7 参照）
+- Liquid Glass 検証: `.glassEffect()` をborderless透明ウィンドウで単体検証してから統合
 
 ## 14. 3本指タップ = マクロレコーダー / トラッキング速度ブースト（2026-07-10実装）
 
-詳細な設計判断は Vault の `プロジェクト/magic-control/magic-control-マクロレコーダーと速度ブースト実装手順.md` と `インサイト/判断/2026-07-10-magiccontrol-速度ブースト方式.md` を参照。ここでは実装済みコードの要点のみ記す。
+ここでは、実装済みのマクロレコーダーとトラッキング速度ブーストの要点を記す。
 
 ### マクロレコーダー(3本指タップ)
 - `ActionKind.macro([RecordedKeyEvent])` を新設。`RecordedKeyEvent` は `keyCode/flags/isDown/isFlagsChanged/offset` を持つ Codable
@@ -390,7 +390,7 @@ Magic Control について
 - 設定UI: 「カーソル速度ブースト」スライダーを追加
 
 ### ビルド・実機確認
-- `./build.sh` 実行、上記2機能を含む全ソースがコンパイル成功。既存の `onChange(of:perform:)` 非推奨警告以外エラーなし。`build/Magic Control.app` 生成・署名まで確認済み
+- `./build.sh` 実行、上記2機能を含む全ソースがコンパイル成功。既存の `onChange(of:perform:)` 非推奨警告以外エラーなし。`build/Magic Mouse Toolkit.app` 生成・署名まで確認済み
 - マクロ録画／再生と速度ブーストは実機確認済み
 - 仮想トラックパッド、2本指スクロール、ネイティブ慣性、内蔵トラックパッドとの入力分離も実機確認済み
 - アクセシビリティ権限の実行中切り替えは既知のmacOS入力フリーズを誘発し得るため、回帰テスト対象外。安全要件は`SAFETY.md`を参照

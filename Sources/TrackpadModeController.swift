@@ -6,7 +6,7 @@ import Foundation
 /// タップをクリックとして合成する。プロトタイプ(prototypes/virtual_trackpad/main.swift)の
 /// 検証済みロジックを、本体の SharedState/SettingsSnapshot/SynthesizedClick に接続して移植したもの。
 ///
-/// 規律(手順書 magic-control-仮想トラックパッド実装手順.md 準拠):
+/// 規律(手順書 magic-mouse-toolkit-仮想トラックパッド実装手順.md 準拠):
 /// MTコールバック(handleContactFrame)内では CGEvent 生成・メモリ確保・ログ出力を行わず、
 /// os_unfair_lock で保護したアキュムレータへの書き込みのみに留める。実際の CGEvent 生成/post は
 /// 専用シリアルキュー上の 120Hz タイマー(drainAndPost)でのみ行う。
@@ -15,7 +15,7 @@ final class TrackpadModeController {
 
     private init() {}
 
-    private let drainQueue = DispatchQueue(label: "com.magiccontrol.trackpadmode.drain")
+    private let drainQueue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.trackpadmode.drain")
     private var drainTimer: DispatchSourceTimer?
 
     private var accLock = os_unfair_lock()
@@ -81,7 +81,7 @@ final class TrackpadModeController {
         timer.resume()
         drainTimer = timer
 
-        MCLog.log("[診断] TrackpadMode: 有効化")
+        MMTLog.log("[診断] TrackpadMode: 有効化")
         TrackpadModeHUD.show()
     }
 
@@ -98,7 +98,7 @@ final class TrackpadModeController {
         drainTimer = nil
         trackedID = nil
 
-        MCLog.log("[診断] TrackpadMode: 無効化")
+        MMTLog.log("[診断] TrackpadMode: 無効化")
         TrackpadModeHUD.hide()
     }
 

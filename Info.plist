@@ -3,13 +3,13 @@
 <plist version="1.0">
 <dict>
 	<key>CFBundleIdentifier</key>
-	<string>com.magiccontrol.app</string>
+	<string>com.mori0818.magicmousetoolkit</string>
 	<key>CFBundleName</key>
-	<string>Magic Control</string>
+	<string>Magic Mouse Toolkit</string>
 	<key>CFBundleDisplayName</key>
-	<string>Magic Control</string>
+	<string>Magic Mouse Toolkit</string>
 	<key>CFBundleExecutable</key>
-	<string>MagicControl</string>
+	<string>MagicMouseToolkit</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleVersion</key>

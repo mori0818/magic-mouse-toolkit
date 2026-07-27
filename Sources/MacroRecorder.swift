@@ -56,7 +56,7 @@ final class MacroRecorder: ObservableObject {
             callback: macroRecorderCallback,
             userInfo: nil
         ) else {
-            MCLog.log("MacroRecorder: イベントタップ作成失敗(アクセシビリティ権限を確認)")
+            MMTLog.log("MacroRecorder: イベントタップ作成失敗(アクセシビリティ権限を確認)")
             sessionLabel = nil
             self.onStop = nil
             return
@@ -67,7 +67,7 @@ final class MacroRecorder: ObservableObject {
         runLoopSource = source
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         isRecording = true
-        MCLog.log("MacroRecorder: 録画開始")
+        MMTLog.log("MacroRecorder: 録画開始")
     }
 
     func stop() {
@@ -82,7 +82,7 @@ final class MacroRecorder: ObservableObject {
         eventTap = nil
         runLoopSource = nil
         isRecording = false
-        MCLog.log("MacroRecorder: 録画終了(\(sessionLabel ?? "?"): \(recordedEvents.count)イベント)")
+        MMTLog.log("MacroRecorder: 録画終了(\(sessionLabel ?? "?"): \(recordedEvents.count)イベント)")
         sessionLabel = nil
         // 自動停止(上限到達)でも録画結果が保存されるよう、保存はここで一元的に行う
         let handler = onStop

@@ -32,6 +32,6 @@ jobs:
 
       - name: Verify app bundle
         run: |
-          codesign --verify --deep --strict --verbose=2 "build/Magic Control.app"
-          lipo -verify_arch x86_64 arm64 build/MagicControl
-          plutil -lint "build/Magic Control.app/Contents/Info.plist"
+          codesign --verify --deep --strict --verbose=2 "build/Magic Mouse Toolkit.app"
+          lipo build/MagicMouseToolkit -verify_arch x86_64 arm64
+          plutil -lint "build/Magic Mouse Toolkit.app/Contents/Info.plist"

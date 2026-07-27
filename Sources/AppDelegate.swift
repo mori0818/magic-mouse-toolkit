@@ -1,6 +1,6 @@
 // The initial permission and menu-bar setup was informed by MouseToucher.
 // Copyright (c) 2025 Roger Hughes, used under the MIT License.
-// See THIRD_PARTY_NOTICES.md. Magic Control changes: GPL-3.0-only.
+// See THIRD_PARTY_NOTICES.md. Magic Mouse Toolkit changes: GPL-3.0-only.
 
 import AppKit
 import SwiftUI
@@ -21,7 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        MCLog.log("========== Magic Control 起動 ==========")
+        MMTLog.log("========== Magic Mouse Toolkit 起動 ==========")
         AppSettings.shared.registerDefaults()
         // イベントタップ/MTコールバック内での遅延初期化(アロケーション+オブザーバ登録)を
         // 避けるため、ここで先に初期化しておく
@@ -55,17 +55,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(willSleep), name: NSWorkspace.willSleepNotification, object: nil)
 
-        // UI検証用(MC_DISABLE_TAPと同じenv切り分けパターン)。
+        // UI検証用(MMT_DISABLE_TAPと同じenv切り分けパターン)。
         // 通常起動では何もしない。1にすると起動直後に設定ウィンドウを開く
         // (スクリーンショットによるデザイン確認のため。2026-07-10)
-        if ProcessInfo.processInfo.environment["MC_OPEN_SETTINGS"] == "1" {
+        if ProcessInfo.processInfo.environment["MMT_OPEN_SETTINGS"] == "1" {
             DispatchQueue.main.async { [weak self] in self?.openSettings() }
         }
 
         // クリック合成経路の自己診断(2026-07-11 リグレッション調査用)。
         // 自アプリの設定ウィンドウのタイトルバーへ合成クリックを1回撃ち、
         // post→HID注入→着弾の各段をログで確認する。外部UIには一切触れない。
-        if ProcessInfo.processInfo.environment["MC_SELFTEST_CLICK"] == "1" {
+        if ProcessInfo.processInfo.environment["MMT_SELFTEST_CLICK"] == "1" {
             DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
                 self?.runClickSelfTest()
             }
@@ -79,22 +79,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
             guard let frame = self?.settingsWindow?.frame,
                   let mainScreen = NSScreen.screens.first else {
-                MCLog.log("[自己診断] 設定ウィンドウの座標が取得できず中止")
+                MMTLog.log("[自己診断] 設定ウィンドウの座標が取得できず中止")
                 return
             }
             NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
-                MCLog.log("[自己診断] 自ウィンドウがleftMouseDownを受領(着弾確認)")
+                MMTLog.log("[自己診断] 自ウィンドウがleftMouseDownを受領(着弾確認)")
                 return event
             }
             // AppKit座標(左下原点)→CGEvent座標(左上原点)。タイトルバー内の点を狙う
             let point = CGPoint(x: frame.midX, y: mainScreen.frame.maxY - frame.maxY + 12)
-            MCLog.log("[自己診断] 合成クリックを自ウィンドウのタイトルバーへ送出 loc=(\(Int(point.x)),\(Int(point.y)))")
+            MMTLog.log("[自己診断] 合成クリックを自ウィンドウのタイトルバーへ送出 loc=(\(Int(point.x)),\(Int(point.y)))")
             SynthesizedClick.post(button: .left, at: point)
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        MCLog.log("終了")
+        MMTLog.log("終了")
         PermissionMonitor.stop()
         EventInterceptor.shared.stop()
         MultitouchDeviceManager.shared.stopHotplugMonitoring()
@@ -110,17 +110,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func showAccessibilityPromptIfNeeded() {
         let options: NSDictionary = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true]
         let trusted = AXIsProcessTrustedWithOptions(options)
-        MCLog.log("アクセシビリティ権限(起動時点): \(trusted ? "許可済み" : "未許可(システムダイアログを表示)")")
+        MMTLog.log("アクセシビリティ権限(起動時点): \(trusted ? "許可済み" : "未許可(システムダイアログを表示)")")
     }
 
     private func onPermissionGranted() {
-        MCLog.log("アクセシビリティ権限を検知(許可)")
+        MMTLog.log("アクセシビリティ権限を検知(許可)")
         SharedState.shared.accessibilityGranted = true
-        // 開発時の切り分け用: MC_DISABLE_TAP=1 の場合は
+        // 開発時の切り分け用: MMT_DISABLE_TAP=1 の場合は
         // CGEventTapを一切作らない(MultitouchDeviceManagerのみ動作)。
         // これでもフリーズが再現すればタップ以外が原因と判定できる。
-        if ProcessInfo.processInfo.environment["MC_DISABLE_TAP"] == "1" {
-            MCLog.log("MC_DISABLE_TAP=1 のためイベントタップ作成をスキップ(切り分け検証モード)")
+        if ProcessInfo.processInfo.environment["MMT_DISABLE_TAP"] == "1" {
+            MMTLog.log("MMT_DISABLE_TAP=1 のためイベントタップ作成をスキップ(切り分け検証モード)")
             return
         }
         EventInterceptor.shared.start()
@@ -129,18 +129,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// PermissionMonitor がテストタップの作成失敗を検知したら呼ばれる。
     /// タップを即座に破棄し(CFMachPortInvalidate含む)、権限復帰を待つ状態に戻る。
     private func handleAccessibilityRevoked() {
-        MCLog.log("アクセシビリティ権限の喪失を検知。タップを破棄します")
+        MMTLog.log("アクセシビリティ権限の喪失を検知。タップを破棄します")
         SharedState.shared.accessibilityGranted = false
         EventInterceptor.shared.stop()
     }
 
     @objc private func willSleep() {
-        MCLog.log("スリープ準備: タッチ監視を停止")
+        MMTLog.log("スリープ準備: タッチ監視を停止")
         MultitouchDeviceManager.shared.stop()
     }
 
     @objc private func didWake() {
-        MCLog.log("スリープ復帰")
+        MMTLog.log("スリープ復帰")
         MultitouchDeviceManager.shared.restart()
         PointerSpeedManager.shared.reapply()
     }
@@ -150,7 +150,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func setupMenuBar() {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "magicmouse", accessibilityDescription: "Magic Control")
+            button.image = NSImage(systemSymbolName: "magicmouse", accessibilityDescription: "Magic Mouse Toolkit")
             button.image?.isTemplate = true
         }
         item.menu = buildMenu()
@@ -200,7 +200,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         menu.addItem(.separator())
 
-        let aboutItem = NSMenuItem(title: "Magic Control について", action: #selector(showAbout), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: "Magic Mouse Toolkit について", action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
@@ -216,7 +216,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     @objc private func toggleEnabled(_ sender: NSMenuItem) {
         AppSettings.shared.enabled.toggle()
         sender.state = AppSettings.shared.enabled ? .on : .off
-        MCLog.log("有効切り替え: \(AppSettings.shared.enabled)")
+        MMTLog.log("有効切り替え: \(AppSettings.shared.enabled)")
     }
 
     @objc private func rediscoverDevices() {
@@ -238,7 +238,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             // Liquid Glass ウィンドウ（フェーズ2）
             let window = GlassWindow.make(
                 rootView: SettingsView(),
-                title: "Magic Control",
+                title: "Magic Mouse Toolkit",
                 contentSize: DS.Layout.windowSize
             )
             window.delegate = self

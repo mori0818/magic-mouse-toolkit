@@ -11,7 +11,7 @@ final class PointerSpeedManager {
     private static let accelerationKey = "HIDMouseAcceleration" as CFString
     /// 初回取得時の元値を永続化するキー。ブースト適用中にkillされ復元が走らなかった場合でも、
     /// 次回起動時にブースト済みの値を元値として誤保持しない（汚染の連鎖防止）
-    private static let originalValueDefaultsKey = "mc.pointer.originalAcceleration"
+    private static let originalValueDefaultsKey = "mmt.pointer.originalAcceleration"
     /// システム設定「軌跡の速さ」スライダーの上限。これを超える値はユーザー設定ではあり得ない
     private static let systemSliderMax = 3.0
 
@@ -29,7 +29,7 @@ final class PointerSpeedManager {
         guard client == nil else { return }
         client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
         originalValue = resolveOriginalValue()
-        MCLog.log("PointerSpeedManager: 元値を確定 \(originalValue.map { String($0) } ?? "未確定")")
+        MMTLog.log("PointerSpeedManager: 元値を確定 \(originalValue.map { String($0) } ?? "未確定")")
         applyFromSettings()
     }
 
@@ -44,7 +44,7 @@ final class PointerSpeedManager {
         guard client != nil else { return }
         if let original = originalValue {
             write(original)
-            MCLog.log("PointerSpeedManager: 終了時に元値へ復元 \(original)")
+            MMTLog.log("PointerSpeedManager: 終了時に元値へ復元 \(original)")
         }
         client = nil
     }
@@ -72,16 +72,16 @@ final class PointerSpeedManager {
         let saved = defaults.object(forKey: Self.originalValueDefaultsKey) as? Double
 
         guard let current = readCurrentValue() else {
-            MCLog.log("PointerSpeedManager: 現在値の取得に失敗。保存済み元値を使用 \(saved.map { String($0) } ?? "なし")")
+            MMTLog.log("PointerSpeedManager: 現在値の取得に失敗。保存済み元値を使用 \(saved.map { String($0) } ?? "なし")")
             return saved
         }
 
         if looksLikeLeftoverBoost(current) {
             if let saved {
-                MCLog.log("PointerSpeedManager: 現在値 \(current) は前回のブースト残留。保存済み元値 \(saved) を使用")
+                MMTLog.log("PointerSpeedManager: 現在値 \(current) は前回のブースト残留。保存済み元値 \(saved) を使用")
                 return saved
             }
-            MCLog.log("PointerSpeedManager: 現在値 \(current) はブースト残留の疑いがあり元値にできない。システム設定のスライダーを一度動かすと再取得する")
+            MMTLog.log("PointerSpeedManager: 現在値 \(current) はブースト残留の疑いがあり元値にできない。システム設定のスライダーを一度動かすと再取得する")
             return nil
         }
 
@@ -89,7 +89,7 @@ final class PointerSpeedManager {
             return saved
         }
         if let saved {
-            MCLog.log("PointerSpeedManager: 保存済み元値 \(saved) と現在値 \(current) が乖離。システム設定の変更とみなし元値を更新")
+            MMTLog.log("PointerSpeedManager: 保存済み元値 \(saved) と現在値 \(current) が乖離。システム設定の変更とみなし元値を更新")
         }
         defaults.set(current, forKey: Self.originalValueDefaultsKey)
         return current

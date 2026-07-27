@@ -5,7 +5,7 @@ import QuartzCore
 
 /// ActionKind の実行。マクロ再生は専用シリアルキューへ分離する。
 enum ActionExecutor {
-    private static let macroQueue = DispatchQueue(label: "com.magiccontrol.macroPlayback")
+    private static let macroQueue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.macroPlayback")
     private static var macroLock = os_unfair_lock()
     /// 再生ごとに1つ進む世代番号。再トリガー時にインクリメントし、
     /// 再生ループ側で世代のズレを検知したら即座に中断する(重複再生防止)。
@@ -47,7 +47,7 @@ enum ActionExecutor {
                     let stillCurrent = myGeneration == macroGeneration
                     os_unfair_lock_unlock(&macroLock)
                     guard stillCurrent else {
-                        MCLog.log("macro: 再トリガーのため再生を中断")
+                        MMTLog.log("macro: 再トリガーのため再生を中断")
                         return
                     }
 

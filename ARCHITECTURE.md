@@ -1,6 +1,6 @@
-# Magic Control architecture
+# Magic Mouse Toolkit architecture
 
-Magic Controlは、Magic Mouseのマルチタッチ入力を読み取り、CGEventを使ってクリック、
+Magic Mouse Toolkitは、Magic Mouseのマルチタッチ入力を読み取り、CGEventを使ってクリック、
 スクロール、カーソル移動、キーボードマクロへ変換するメニューバーアプリです。
 
 ## Runtime
@@ -10,7 +10,7 @@ Magic Controlは、Magic Mouseのマルチタッチ入力を読み取り、CGEve
 - AppKit + SwiftUI
 - `swiftc`直接ビルド
 - arm64 / x86_64 Universal Binary
-- Bundle ID: `com.magiccontrol.app`
+- Bundle ID: `com.mori0818.magicmousetoolkit`
 
 ## Third-party provenance
 
@@ -20,7 +20,7 @@ Magic Controlは、Magic Mouseのマルチタッチ入力を読み取り、CGEve
 ### MouseToucher
 
 [MouseToucher](https://github.com/meatpaste/mousetoucher)はMIT Licenseです。
-Magic Controlの初期プロトタイプでは、次の領域を起点として利用しました。
+Magic Mouse Toolkitの初期プロトタイプでは、次の領域を起点として利用しました。
 
 - `MultitouchSupport.framework`用のCブリッジ宣言
 - `MTDeviceCreateList`と`MTDeviceIsBuiltIn`によるデバイス列挙
@@ -39,7 +39,7 @@ MouseToucherの著作権表示とMIT Licenseを継続して掲載します。
 物理クリックイベントを破棄・再送信せず、同じCGEventのtypeとボタン番号を書き換えて
 ミドルクリックとして返す方式を参考・改変しています。
 
-Magic Control全体をGPL-3.0-onlyで公開することで、この由来と互換性を保ちます。
+Magic Mouse Toolkit全体をGPL-3.0-onlyで公開することで、この由来と互換性を保ちます。
 
 ## Components
 
@@ -103,8 +103,8 @@ IOHIDEventSystemClient SPIでシステムの`HIDMouseAcceleration`を変更し�
 
 ### `Logger.swift`
 
-unified logと`~/Library/Logs/MagicControl.log`へ診断情報を書きます。
-ファイルログは約1 MiBで`MagicControl.log.old`へローテーションします。
+unified logと`~/Library/Logs/MagicMouseToolkit.log`へ診断情報を書きます。
+ファイルログは約1 MiBで`MagicMouseToolkit.log.old`へローテーションします。
 
 ## Build and signing
 

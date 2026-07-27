@@ -3,7 +3,7 @@
  * Copyright (c) 2025 Roger Hughes, used under the MIT License.
  * See THIRD_PARTY_NOTICES.md.
  *
- * Magic Control modifications are licensed under GPL-3.0-only.
+ * Magic Mouse Toolkit modifications are licensed under GPL-3.0-only.
  */
 #ifndef MultitouchBridge_h
 #define MultitouchBridge_h
