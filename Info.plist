@@ -22,5 +22,12 @@
 	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>26.0</string>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>ja</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ja</string>
+		<string>en</string>
+	</array>
 </dict>
 </plist>

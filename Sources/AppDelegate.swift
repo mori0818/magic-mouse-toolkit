@@ -161,52 +161,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let menu = NSMenu()
 
         // 状態表示（menuWillOpen で毎回更新）
-        let permissionItem = NSMenuItem(title: "権限: 確認中…", action: nil, keyEquivalent: "")
+        let permissionItem = NSMenuItem(title: NSLocalizedString("権限: 確認中…", comment: "メニューバー: 権限ステータス初期表示"), action: nil, keyEquivalent: "")
         permissionItem.isEnabled = false
         menu.addItem(permissionItem)
         permissionStatusItem = permissionItem
 
-        let deviceItem = NSMenuItem(title: "デバイス: 確認中…", action: nil, keyEquivalent: "")
+        let deviceItem = NSMenuItem(title: NSLocalizedString("デバイス: 確認中…", comment: "メニューバー: デバイスステータス初期表示"), action: nil, keyEquivalent: "")
         deviceItem.isEnabled = false
         menu.addItem(deviceItem)
         deviceStatusItem = deviceItem
 
-        let batteryItem = NSMenuItem(title: "バッテリー: 確認中…", action: nil, keyEquivalent: "")
+        let batteryItem = NSMenuItem(title: NSLocalizedString("バッテリー: 確認中…", comment: "メニューバー: バッテリーステータス初期表示"), action: nil, keyEquivalent: "")
         batteryItem.isEnabled = false
         menu.addItem(batteryItem)
         batteryStatusItem = batteryItem
 
-        let openAXItem = NSMenuItem(title: "アクセシビリティ設定を開く…", action: #selector(openAccessibilitySettings), keyEquivalent: "")
+        let openAXItem = NSMenuItem(title: NSLocalizedString("アクセシビリティ設定を開く…", comment: "メニューバー項目"), action: #selector(openAccessibilitySettings), keyEquivalent: "")
         openAXItem.target = self
         menu.addItem(openAXItem)
         openAccessibilityItem = openAXItem
 
         menu.addItem(.separator())
 
-        let enabledItem = NSMenuItem(title: "有効", action: #selector(toggleEnabled), keyEquivalent: "")
+        let enabledItem = NSMenuItem(title: NSLocalizedString("有効", comment: "メニューバー項目: 有効トグル"), action: #selector(toggleEnabled), keyEquivalent: "")
         enabledItem.target = self
         enabledItem.state = AppSettings.shared.enabled ? .on : .off
         menu.addItem(enabledItem)
 
         menu.addItem(.separator())
 
-        let openSettingsItem = NSMenuItem(title: "設定を開く…", action: #selector(openSettings), keyEquivalent: ",")
+        let openSettingsItem = NSMenuItem(title: NSLocalizedString("設定を開く…", comment: "メニューバー項目"), action: #selector(openSettings), keyEquivalent: ",")
         openSettingsItem.target = self
         menu.addItem(openSettingsItem)
 
-        let rediscoverItem = NSMenuItem(title: "デバイスを再検出", action: #selector(rediscoverDevices), keyEquivalent: "")
+        let rediscoverItem = NSMenuItem(title: NSLocalizedString("デバイスを再検出", comment: "メニューバー項目"), action: #selector(rediscoverDevices), keyEquivalent: "")
         rediscoverItem.target = self
         menu.addItem(rediscoverItem)
 
         menu.addItem(.separator())
 
-        let aboutItem = NSMenuItem(title: "Magic Mouse Toolkit について", action: #selector(showAbout), keyEquivalent: "")
+        let aboutItem = NSMenuItem(title: NSLocalizedString("Magic Mouse Toolkit について", comment: "メニューバー項目"), action: #selector(showAbout), keyEquivalent: "")
         aboutItem.target = self
         menu.addItem(aboutItem)
 
         menu.addItem(.separator())
 
-        let quitItem = NSMenuItem(title: "終了", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: NSLocalizedString("終了", comment: "メニューバー項目"), action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         menu.addItem(quitItem)
 
         menu.delegate = self
@@ -259,22 +259,22 @@ extension AppDelegate: NSMenuDelegate {
     func menuWillOpen(_ menu: NSMenu) {
         let trusted = AXIsProcessTrusted()
         permissionStatusItem?.title = trusted
-            ? "権限: 許可済み ✓"
-            : "権限: 未許可 ✗（クリックが送出できません）"
+            ? NSLocalizedString("権限: 許可済み ✓", comment: "メニューバー: 権限ステータス")
+            : NSLocalizedString("権限: 未許可 ✗（クリックが送出できません）", comment: "メニューバー: 権限ステータス")
         openAccessibilityItem?.isHidden = trusted
 
         let manager = MultitouchDeviceManager.shared
         if manager.activeDeviceCount > 0 {
-            let fallbackNote = manager.usedFallbackFilter ? "・フォールバック中" : ""
-            deviceStatusItem?.title = "デバイス: \(manager.activeDeviceCount)台 検出\(fallbackNote)"
+            let fallbackNote = manager.usedFallbackFilter ? NSLocalizedString("・フォールバック中", comment: "メニューバー: デバイスステータス補足") : ""
+            deviceStatusItem?.title = String(format: NSLocalizedString("デバイス: %d台 検出%@", comment: "メニューバー: デバイスステータス"), manager.activeDeviceCount, fallbackNote)
         } else {
-            deviceStatusItem?.title = "デバイス: 未検出 ✗（familyId: \(manager.lastDiscoveredFamilyIDs)）"
+            deviceStatusItem?.title = String(format: NSLocalizedString("デバイス: 未検出 ✗（familyId: %@）", comment: "メニューバー: デバイスステータス"), "\(manager.lastDiscoveredFamilyIDs)")
         }
 
         if let percent = BatteryMonitor.mouseBatteryPercent() {
             batteryStatusItem?.title = percent <= 20
-                ? "バッテリー: \(percent)% ⚠"
-                : "バッテリー: \(percent)%"
+                ? String(format: NSLocalizedString("バッテリー: %d%% ⚠", comment: "メニューバー: バッテリーステータス"), percent)
+                : String(format: NSLocalizedString("バッテリー: %d%%", comment: "メニューバー: バッテリーステータス"), percent)
             batteryStatusItem?.isHidden = false
         } else {
             // マウス未接続時はデバイス表示と情報が重複するため、行ごと隠す。

@@ -24,9 +24,10 @@ swiftc "${SWIFT_FILES[@]}" "${FLAGS[@]}" -target x86_64-apple-macos26.0 -o build
 lipo -create build/$BIN-arm64 build/$BIN-x86_64 -output build/$BIN
 
 rm -rf "build/$APP"
-mkdir -p "build/$APP/Contents/MacOS"
+mkdir -p "build/$APP/Contents/MacOS" "build/$APP/Contents/Resources"
 cp Info.plist "build/$APP/Contents/"
 cp build/$BIN "build/$APP/Contents/MacOS/"
+cp -R Resources/ja.lproj Resources/en.lproj "build/$APP/Contents/Resources/"
 
 # iCloud Drive 配下では com.apple.FinderInfo / fileprovider 拡張属性が
 # 署名の直前に再付与されることがあり codesign が失敗するため、リトライ付きで署名する

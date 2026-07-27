@@ -14,16 +14,32 @@ struct TapConditionResult: Identifiable {
 }
 
 enum TapFailureReason: String {
-    case geometryVeto = "指の動きが大きすぎたため無視"
-    case momentumVeto = "慣性スクロール中のため無視"
-    case duration = "接触が長すぎたため無視"
-    case straightDistance = "位置ズレが大きすぎたため無視"
-    case pathLength = "動きの合計が大きすぎたため無視"
-    case velocity = "動きが速すぎたため無視"
-    case minFrames = "接触が短すぎたため無視"
-    case outOfZone = "反応範囲の外だったため無視"
-    case scrollVeto = "スクロール直後のため無視"
-    case buttonVeto = "物理クリック直後のため無視"
+    case geometryVeto
+    case momentumVeto
+    case duration
+    case straightDistance
+    case pathLength
+    case velocity
+    case minFrames
+    case outOfZone
+    case scrollVeto
+    case buttonVeto
+
+    /// デバッグライブ表示・診断ログに出す不成立理由の文言。
+    var localizedDescription: String {
+        switch self {
+        case .geometryVeto: return NSLocalizedString("指の動きが大きすぎたため無視", comment: "タップ不成立理由: 接触中の動き超過")
+        case .momentumVeto: return NSLocalizedString("慣性スクロール中のため無視", comment: "タップ不成立理由: 慣性スクロール中")
+        case .duration: return NSLocalizedString("接触が長すぎたため無視", comment: "タップ不成立理由: 接触時間超過")
+        case .straightDistance: return NSLocalizedString("位置ズレが大きすぎたため無視", comment: "タップ不成立理由: 位置ズレ超過")
+        case .pathLength: return NSLocalizedString("動きの合計が大きすぎたため無視", comment: "タップ不成立理由: 移動量超過")
+        case .velocity: return NSLocalizedString("動きが速すぎたため無視", comment: "タップ不成立理由: 速度超過")
+        case .minFrames: return NSLocalizedString("接触が短すぎたため無視", comment: "タップ不成立理由: 接触フレーム不足")
+        case .outOfZone: return NSLocalizedString("反応範囲の外だったため無視", comment: "タップ不成立理由: ゾーン外")
+        case .scrollVeto: return NSLocalizedString("スクロール直後のため無視", comment: "タップ不成立理由: スクロール直後")
+        case .buttonVeto: return NSLocalizedString("物理クリック直後のため無視", comment: "タップ不成立理由: 物理クリック直後")
+        }
+    }
 }
 
 /// リリースされた TouchTrack がタップとして成立するかを判定する（4層防衛、§1参照）。
@@ -56,33 +72,34 @@ enum TapRecognizer {
         }
 
         // 第1層: 接触ジオメトリ
-        record("接触中の動き超過",
-               actual: track.vetoed ? "超過あり" : "なし", threshold: "なし",
+        record(NSLocalizedString("接触中の動き超過", comment: "判定内訳ラベル"),
+               actual: track.vetoed ? NSLocalizedString("超過あり", comment: "判定内訳の実測値") : NSLocalizedString("なし", comment: "判定内訳の実測値"),
+               threshold: NSLocalizedString("なし", comment: "判定内訳の閾値"),
                passed: !track.vetoed, reason: .geometryVeto)
 
-        record("接触時間",
-               actual: String(format: "%.3f秒", duration),
-               threshold: String(format: "≤%.3f秒", settings.tapMaxDuration),
+        record(NSLocalizedString("接触時間", comment: "判定内訳ラベル"),
+               actual: String(format: NSLocalizedString("%.3f秒", comment: "秒数"), duration),
+               threshold: String(format: NSLocalizedString("≤%.3f秒", comment: "秒数の上限"), settings.tapMaxDuration),
                passed: duration <= settings.tapMaxDuration, reason: .duration)
 
-        record("位置ズレ",
+        record(NSLocalizedString("位置ズレ", comment: "判定内訳ラベル"),
                actual: String(format: "%.3f", straightDistance),
-               threshold: String(format: "≤%.3f", settings.tapMaxStraightDistance),
+               threshold: String(format: NSLocalizedString("≤%.3f", comment: "数値の上限"), settings.tapMaxStraightDistance),
                passed: straightDistance <= settings.tapMaxStraightDistance, reason: .straightDistance)
 
-        record("動きの合計",
+        record(NSLocalizedString("動きの合計", comment: "判定内訳ラベル"),
                actual: String(format: "%.3f", track.pathLength),
-               threshold: String(format: "≤%.3f", settings.tapMaxPathLength),
+               threshold: String(format: NSLocalizedString("≤%.3f", comment: "数値の上限"), settings.tapMaxPathLength),
                passed: Double(track.pathLength) <= settings.tapMaxPathLength, reason: .pathLength)
 
-        record("動きの速さ",
+        record(NSLocalizedString("動きの速さ", comment: "判定内訳ラベル"),
                actual: String(format: "%.3f", track.maxVelocity),
-               threshold: String(format: "≤%.3f", settings.tapMaxVelocity),
+               threshold: String(format: NSLocalizedString("≤%.3f", comment: "数値の上限"), settings.tapMaxVelocity),
                passed: Double(track.maxVelocity) <= settings.tapMaxVelocity, reason: .velocity)
 
-        record("接触フレーム数",
+        record(NSLocalizedString("接触フレーム数", comment: "判定内訳ラベル"),
                actual: "\(track.frames)",
-               threshold: "≥\(settings.tapMinFrames)",
+               threshold: String(format: NSLocalizedString("≥%d", comment: "数値の下限"), settings.tapMinFrames),
                passed: track.frames >= settings.tapMinFrames, reason: .minFrames)
 
         // ゾーン判定: min/max が逆転して保存されていても自動補正し、範囲ゼロで全滅しないようにする
@@ -97,15 +114,16 @@ enum TapRecognizer {
         // 3本指タップは全面が対象(指の本数自体が意図表明)のため、ゾーン要求の有無は
         // 指本数が確定する finalizePendingGroup 側で判断する
         conditions.append(TapConditionResult(
-            label: "反応範囲内(開始点・3本指は全面)",
-            actual: String(format: "左から%.0f%% 手前から%.0f%%", track.startPos.x * 100, track.startPos.y * 100),
-            threshold: String(format: "左右%.0f-%.0f%% 前後%.0f-%.0f%%",
+            label: NSLocalizedString("反応範囲内(開始点・3本指は全面)", comment: "判定内訳ラベル"),
+            actual: String(format: NSLocalizedString("左から%.0f%% 手前から%.0f%%", comment: "座標(%)"), track.startPos.x * 100, track.startPos.y * 100),
+            threshold: String(format: NSLocalizedString("左右%.0f-%.0f%% 前後%.0f-%.0f%%", comment: "反応範囲(%)"),
                                zoneLoX * 100, zoneHiX * 100, zoneLoY * 100, zoneHiY * 100),
             passed: inZone))
 
         // 第3層: 慣性スクロールベト
-        record("慣性スクロール中に開始",
-               actual: track.beganDuringMomentum ? "はい" : "いいえ", threshold: "いいえ",
+        record(NSLocalizedString("慣性スクロール中に開始", comment: "判定内訳ラベル"),
+               actual: track.beganDuringMomentum ? NSLocalizedString("はい", comment: "判定内訳の実測値") : NSLocalizedString("いいえ", comment: "判定内訳の実測値"),
+               threshold: NSLocalizedString("いいえ", comment: "判定内訳の閾値"),
                passed: !track.beganDuringMomentum, reason: .momentumVeto)
 
         // 第2層: スクロールベト（簡略化: lastScrollAt が start-window 以降に更新されていたら不成立）
@@ -114,24 +132,24 @@ enum TapRecognizer {
         let sinceScroll = track.startTime - lastScrollAt
         let scrollActual: String
         if lastScrollAt < -1e8 {
-            scrollActual = "スクロールなし"
+            scrollActual = NSLocalizedString("スクロールなし", comment: "判定内訳の実測値")
         } else if sinceScroll < 0 {
-            scrollActual = "接触中にスクロール"
+            scrollActual = NSLocalizedString("接触中にスクロール", comment: "判定内訳の実測値")
         } else {
-            scrollActual = String(format: "%.2f秒前", sinceScroll)
+            scrollActual = String(format: NSLocalizedString("%.2f秒前", comment: "経過秒数"), sinceScroll)
         }
-        record("スクロール直後でない",
+        record(NSLocalizedString("スクロール直後でない", comment: "判定内訳ラベル"),
                actual: scrollActual,
-               threshold: String(format: "%.2f秒以上あける", settings.scrollVetoWindow),
+               threshold: String(format: NSLocalizedString("%.2f秒以上あける", comment: "必要な間隔"), settings.scrollVetoWindow),
                passed: !scrollVetoed, reason: .scrollVeto)
 
         // 第4層: 物理ボタンベト
         let buttonDown = shared.buttonDown
         let lastButtonUpAt = shared.lastButtonUpAt
         let buttonVetoed = buttonDown || (now - lastButtonUpAt) <= settings.buttonVetoWindow
-        record("物理クリック直後でない",
-               actual: buttonDown ? "押下中" : String(format: "%.3f秒前にUp", now - lastButtonUpAt),
-               threshold: String(format: "%.2f秒以上あける", settings.buttonVetoWindow),
+        record(NSLocalizedString("物理クリック直後でない", comment: "判定内訳ラベル"),
+               actual: buttonDown ? NSLocalizedString("押下中", comment: "判定内訳の実測値") : String(format: NSLocalizedString("%.3f秒前にUp", comment: "経過秒数"), now - lastButtonUpAt),
+               threshold: String(format: NSLocalizedString("%.2f秒以上あける", comment: "必要な間隔"), settings.buttonVetoWindow),
                passed: !buttonVetoed, reason: .buttonVeto)
 
         // ゾーンは record() を通していないため firstFailure に影響しない
