@@ -1,3 +1,5 @@
+import AppKit
+import Combine
 import CoreGraphics
 import Darwin
 import Foundation
@@ -10,13 +12,59 @@ import Foundation
 /// MTコールバック(handleContactFrame)内では CGEvent 生成・メモリ確保・ログ出力を行わず、
 /// os_unfair_lock で保護したアキュムレータへの書き込みのみに留める。実際の CGEvent 生成/post は
 /// 専用シリアルキュー上の 120Hz タイマー(drainAndPost)でのみ行う。
-final class TrackpadModeController {
+final class TrackpadModeController: ObservableObject {
     static let shared = TrackpadModeController()
 
-    private init() {}
+    private init() {
+        refreshDisplayBounds()
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didChangeScreenParametersNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.refreshDisplayBounds()
+        }
+    }
 
     private let drainQueue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.trackpadmode.drain")
     private var drainTimer: DispatchSourceTimer?
+
+    // 全ディスプレイのbounds(CG座標・左上原点)。120Hzのdrainループから毎回
+    // CGGetActiveDisplayListを呼ぶのは避け、着脱/配置変更通知でのみ更新する。
+    private var displayLock = os_unfair_lock()
+    private var displayBounds: [CGRect] = []
+
+    private func refreshDisplayBounds() {
+        var count: UInt32 = 0
+        CGGetActiveDisplayList(0, nil, &count)
+        var ids = [CGDirectDisplayID](repeating: 0, count: Int(count))
+        CGGetActiveDisplayList(count, &ids, &count)
+        let bounds = ids.map { CGDisplayBounds($0) }
+        os_unfair_lock_lock(&displayLock)
+        displayBounds = bounds
+        os_unfair_lock_unlock(&displayLock)
+    }
+
+    private func currentDisplayBounds() -> [CGRect] {
+        os_unfair_lock_lock(&displayLock)
+        let bounds = displayBounds
+        os_unfair_lock_unlock(&displayLock)
+        return bounds
+    }
+
+    /// 移動先がどのディスプレイにも属さない場合、軸ごとに分解して通る方だけ動かす
+    /// (壁沿いの滑走。物理マウスと同じ挙動)。ディスプレイ間の隙間へワープするのを防ぐ。
+    private func resolvedPosition(current: CGPoint, target: CGPoint) -> CGPoint {
+        let bounds = currentDisplayBounds()
+        guard !bounds.isEmpty else { return current }
+        func contains(_ point: CGPoint) -> Bool {
+            bounds.contains { $0.contains(point) }
+        }
+        if contains(target) { return target }
+        let xOnly = CGPoint(x: target.x, y: current.y)
+        if contains(xOnly) { return xOnly }
+        let yOnly = CGPoint(x: current.x, y: target.y)
+        if contains(yOnly) { return yOnly }
+        return current
+    }
 
     private var accLock = os_unfair_lock()
     private var accDX: Double = 0
@@ -47,9 +95,13 @@ final class TrackpadModeController {
     private var lastThreeFingerToggleTapAt: Double = -1e9
     private let trackpadToggleDoubleTapWindow: Double = 0.45
 
-    private(set) var isActive = false
+    @Published private(set) var isActive = false
 
     func toggle() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in self?.toggle() }
+            return
+        }
         if isActive {
             deactivate()
         } else {
@@ -82,7 +134,7 @@ final class TrackpadModeController {
         drainTimer = timer
 
         MMTLog.log("[診断] TrackpadMode: 有効化")
-        TrackpadModeHUD.show()
+        TrackpadModeHUD.flash(active: true)
     }
 
     private func deactivate() {
@@ -99,7 +151,7 @@ final class TrackpadModeController {
         trackedID = nil
 
         MMTLog.log("[診断] TrackpadMode: 無効化")
-        TrackpadModeHUD.hide()
+        TrackpadModeHUD.flash(active: false)
     }
 
     private func resetTrackingState() {
@@ -291,19 +343,14 @@ final class TrackpadModeController {
 
         if dx != 0 || dy != 0 {
             if let current = CGEvent(source: nil)?.location {
-                var newX = current.x + dx
-                var newY = current.y + dy
-
-                // 座標系は左上原点。まずメインディスプレイのみ対応し、範囲外に出ないようクランプする
-                let bounds = CGDisplayBounds(CGMainDisplayID())
-                newX = min(max(newX, bounds.minX), bounds.maxX - 1)
-                newY = min(max(newY, bounds.minY), bounds.maxY - 1)
+                let target = CGPoint(x: current.x + dx, y: current.y + dy)
+                let resolved = resolvedPosition(current: current, target: target)
 
                 if let src = CGEventSource(stateID: .hidSystemState),
                    let move = CGEvent(
                         mouseEventSource: src,
                         mouseType: .mouseMoved,
-                        mouseCursorPosition: CGPoint(x: newX, y: newY),
+                        mouseCursorPosition: resolved,
                         mouseButton: .left
                    ) {
                     move.setIntegerValueField(.eventSourceUserData, value: SynthesizedClick.signature)
