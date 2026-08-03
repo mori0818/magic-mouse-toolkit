@@ -30,6 +30,7 @@
 
 /* メイン設定トグル */
 "1本指タップで左/右クリック" = "1-finger tap for left/right click";
+"タップは常に左クリック(右クリックは物理クリックのみ)" = "Tap is always left-click (right-click via physical click only)";
 
 /* 詳細設定スライダーラベル */
 "2本指の同時判定時間" = "2-finger simultaneity window";
@@ -147,8 +148,11 @@
 /* 詳細設定セクション見出し */
 "トラックパッドモード" = "Trackpad Mode";
 
-/* トラックパッドモード中のHUD表示 */
-"トラックパッドモード beta" = "Trackpad Mode beta";
+/* トラックパッドモード切替トースト */
+"トラックパッドモード ON" = "Trackpad Mode ON";
+
+/* トラックパッドモード切替トースト */
+"トラックパッドモード OFF" = "Trackpad Mode OFF";
 
 /* 3本指タップの割り当て種別 */
 "トラックパッドモード切替" = "Toggle Trackpad Mode";

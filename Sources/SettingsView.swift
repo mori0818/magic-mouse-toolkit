@@ -20,6 +20,7 @@ struct SettingsView: View {
 
     // ジェスチャー
     @AppStorage(AppSettings.Key.oneFingerTapEnabled) private var oneFingerTapEnabled: Bool = true
+    @AppStorage(AppSettings.Key.tapAlwaysLeftClick) private var tapAlwaysLeftClick: Bool = false
     @AppStorage(AppSettings.Key.twoFingerTapEnabled) private var twoFingerTapEnabled: Bool = true
     @AppStorage(AppSettings.Key.threeFingerTapEnabled) private var threeFingerTapEnabled: Bool = false
     @ObservedObject private var macroRecorder = MacroRecorder.shared
@@ -52,6 +53,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.Key.trackpadModeGain) private var trackpadModeGain: Double = 1000.0
 
     @ObservedObject private var debugFeed = DebugFeed.shared
+    @ObservedObject private var trackpadMode = TrackpadModeController.shared
     @State private var showDetailSettings = false
     @State private var zoneDetailExpanded = false
 
@@ -180,6 +182,8 @@ struct SettingsView: View {
                 .notifyOnChange(of: enabled)
             toggleRow(NSLocalizedString("1本指タップで左/右クリック", comment: "メイン設定トグル"), isOn: $oneFingerTapEnabled)
                 .notifyOnChange(of: oneFingerTapEnabled)
+            toggleRow(NSLocalizedString("タップは常に左クリック(右クリックは物理クリックのみ)", comment: "メイン設定トグル"), isOn: $tapAlwaysLeftClick)
+                .notifyOnChange(of: tapAlwaysLeftClick)
             toggleRow(NSLocalizedString("2本指タップで左クリック", comment: "メイン設定トグル"), isOn: $twoFingerTapEnabled)
                 .notifyOnChange(of: twoFingerTapEnabled)
             toggleRow(NSLocalizedString("2本指クリックでミドルクリック", comment: "メイン設定トグル"), isOn: $middleClickEnabled)
@@ -187,19 +191,21 @@ struct SettingsView: View {
             toggleRow(NSLocalizedString("縦方向のみにスクロール(横スクロール無効)", comment: "メイン設定トグル"), isOn: $verticalScrollOnly)
                 .notifyOnChange(of: verticalScrollOnly)
 
-            HStack(spacing: DS.Space.s) {
-                // ラベルはSliderに押されて省略(…)されやすいため全文表示を優先する
-                rowLabel(NSLocalizedString("右クリックの開始位置", comment: "メイン設定ラベル"))
-                    .fixedSize()
-                    .layoutPriority(1)
-                Slider(value: $rightZoneMinX, in: 0...1)
-                    .controlSize(.small)
-                Text(String(format: NSLocalizedString("左から%.0f%%", comment: "座標(%)"), rightZoneMinX * 100))
-                    .font(DS.Font.value)
-                    .foregroundColor(DS.Color.labelSecondary)
+            if !tapAlwaysLeftClick {
+                HStack(spacing: DS.Space.s) {
+                    // ラベルはSliderに押されて省略(…)されやすいため全文表示を優先する
+                    rowLabel(NSLocalizedString("右クリックの開始位置", comment: "メイン設定ラベル"))
+                        .fixedSize()
+                        .layoutPriority(1)
+                    Slider(value: $rightZoneMinX, in: 0...1)
+                        .controlSize(.small)
+                    Text(String(format: NSLocalizedString("左から%.0f%%", comment: "座標(%)"), rightZoneMinX * 100))
+                        .font(DS.Font.value)
+                        .foregroundColor(DS.Color.labelSecondary)
+                }
+                .frame(height: DS.Layout.rowHeight)
+                .notifyOnChange(of: rightZoneMinX)
             }
-            .frame(height: DS.Layout.rowHeight)
-            .notifyOnChange(of: rightZoneMinX)
 
             // ボタンの文法は .bordered 1本に統一し、階層は controlSize だけで表す(2026-07-27)。
             // 「詳細設定」はページ遷移という主要アクションなので regular、録画/クリア等の
@@ -439,7 +445,7 @@ struct SettingsView: View {
                 SliderRow(NSLocalizedString("移動ゲイン", comment: "詳細設定スライダーラベル"), value: $trackpadModeGain, range: 200...3000) { String(format: "%.0f", $0) }
                     .notifyOnChange(of: trackpadModeGain)
                 caption(NSLocalizedString("マウス表面のなぞりをカーソル移動に変換する際の倍率です。3本指ダブルタップ、または下のボタンでモードのON/OFFを切り替えます", comment: "詳細設定キャプション"))
-                Button(TrackpadModeController.shared.isActive
+                Button(trackpadMode.isActive
                        ? NSLocalizedString("今すぐOFFにする", comment: "トラックパッドモード切替ボタン")
                        : NSLocalizedString("今すぐONにする", comment: "トラックパッドモード切替ボタン")) {
                     TrackpadModeController.shared.toggle()

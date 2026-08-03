@@ -51,6 +51,8 @@ final class EventInterceptor {
         let eventsOfInterest: CGEventMask =
             (1 << CGEventType.leftMouseDown.rawValue)
             | (1 << CGEventType.leftMouseUp.rawValue)
+            | (1 << CGEventType.rightMouseDown.rawValue)
+            | (1 << CGEventType.rightMouseUp.rawValue)
             | (1 << CGEventType.scrollWheel.rawValue)
 
         guard let tap = CGEvent.tapCreate(
@@ -108,7 +110,8 @@ final class EventInterceptor {
             // （残っていると再有効化後の最初のクリックが誤ってミドルUpに変換される）
             let shared = SharedState.shared
             shared.convertingToMiddle = false
-            shared.buttonDown = false
+            shared.leftButtonDown = false
+            shared.rightButtonDown = false
             shared.momentumActive = false
             shared.trackpadScrollPassthrough = false
             shared.trackpadMomentumEligibleUntil = -1e9
@@ -213,7 +216,7 @@ final class EventInterceptor {
                 MMTLog.log("[診断] 合成leftMouseDownがHIDタップを通過(注入成功)")
                 return Unmanaged.passUnretained(event)
             }
-            shared.buttonDown = true
+            shared.leftButtonDown = true
             let settings = SettingsStore.shared.snapshot
             if settings.middleClickEnabled
                 && shared.fingerCount == 2
@@ -228,13 +231,28 @@ final class EventInterceptor {
             if event.getIntegerValueField(.eventSourceUserData) == SynthesizedClick.signature {
                 return Unmanaged.passUnretained(event)
             }
-            shared.buttonDown = false
+            shared.leftButtonDown = false
             shared.lastButtonUpAt = now
             if shared.convertingToMiddle {
                 shared.convertingToMiddle = false
                 event.type = .otherMouseUp
                 event.setIntegerValueField(.mouseEventButtonNumber, value: 2)
             }
+            return Unmanaged.passUnretained(event)
+
+        case .rightMouseDown:
+            if event.getIntegerValueField(.eventSourceUserData) == SynthesizedClick.signature {
+                return Unmanaged.passUnretained(event)
+            }
+            shared.rightButtonDown = true
+            return Unmanaged.passUnretained(event)
+
+        case .rightMouseUp:
+            if event.getIntegerValueField(.eventSourceUserData) == SynthesizedClick.signature {
+                return Unmanaged.passUnretained(event)
+            }
+            shared.rightButtonDown = false
+            shared.lastButtonUpAt = now
             return Unmanaged.passUnretained(event)
 
         default:

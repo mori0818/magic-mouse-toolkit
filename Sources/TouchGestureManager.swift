@@ -21,7 +21,10 @@ final class SharedState {
     private var _lastFrameAt: CFTimeInterval = -1e9
     private var _lastScrollAt: CFTimeInterval = -1e9
     private var _momentumActive: Bool = false
-    private var _buttonDown: Bool = false
+    // 左右を単一Boolに畳むと「左Down→右Down→左Up」で右が押下中なのに解放扱いになるため、
+    // ボタンごとに持つ(タップ常時左クリック設定では物理右クリックが主経路になり実際に起こりうる)
+    private var _leftButtonDown: Bool = false
+    private var _rightButtonDown: Bool = false
     private var _lastButtonUpAt: CFTimeInterval = -1e9
     private var _convertingToMiddle: Bool = false
     private var _accessibilityGranted: Bool = false
@@ -54,9 +57,17 @@ final class SharedState {
         get { withLock { _momentumActive } }
         set { withLock { _momentumActive = newValue } }
     }
+    /// 第4層物理ボタンベトの判定用。左右いずれかが押下中なら true(TapRecognizerはこれだけを見る)
     var buttonDown: Bool {
-        get { withLock { _buttonDown } }
-        set { withLock { _buttonDown = newValue } }
+        withLock { _leftButtonDown || _rightButtonDown }
+    }
+    var leftButtonDown: Bool {
+        get { withLock { _leftButtonDown } }
+        set { withLock { _leftButtonDown = newValue } }
+    }
+    var rightButtonDown: Bool {
+        get { withLock { _rightButtonDown } }
+        set { withLock { _rightButtonDown = newValue } }
     }
     var lastButtonUpAt: CFTimeInterval {
         get { withLock { _lastButtonUpAt } }
@@ -114,6 +125,8 @@ struct TouchTrack {
     var frames: Int = 1
     var beganDuringMomentum: Bool = false
     var vetoed: Bool = false
+    /// 接触中に複数指の同時接触を観測したか。単独クリックとしての誤発火抑制に使う
+    var sawMultipleContacts: Bool = false
     /// リリース時の判定結果(TapRecognizer)を保持。ゾーン要求は指本数確定後に評価する
     var inZone: Bool = false
 }
@@ -223,7 +236,15 @@ final class TouchGestureManager {
             touchingIDs.insert(touch.identifier)
             latestX = touch.normalized.position.x
             latestY = touch.normalized.position.y
-            updateTrack(for: touch, at: now, settings: settings)
+        }
+
+        // 複数指同時接触かどうかが確定してからトラックを更新する。
+        // sawMultipleContacts は「このフレームに複数指が写っていたか」を記録し、
+        // 二段ガード(handleRelease)で単独クリックの誤発火を抑制するために使う
+        let hasMultipleContacts = count >= 2
+        for touch in touches {
+            guard touch.state == 4 else { continue }
+            updateTrack(for: touch, at: now, hasMultipleContacts: hasMultipleContacts, settings: settings)
         }
 
         let releasedIDs = Set(activeTouches.keys).subtracting(touchingIDs)
@@ -241,7 +262,7 @@ final class TouchGestureManager {
         DebugFeed.shared.pushTouchState(fingerCount: count, x: latestX, y: latestY)
     }
 
-    private func updateTrack(for touch: MTTouch, at now: CFTimeInterval, settings: SettingsSnapshot) {
+    private func updateTrack(for touch: MTTouch, at now: CFTimeInterval, hasMultipleContacts: Bool, settings: SettingsSnapshot) {
         let id = touch.identifier
         if var track = activeTouches[id] {
             let dx = touch.normalized.position.x - track.lastPos.x
@@ -251,6 +272,9 @@ final class TouchGestureManager {
             track.maxVelocity = max(track.maxVelocity, velocity)
             track.lastPos = touch.normalized.position
             track.frames += 1
+            if hasMultipleContacts {
+                track.sawMultipleContacts = true
+            }
             if Double(track.pathLength) > settings.tapMaxPathLength
                 || Double(track.maxVelocity) > settings.tapMaxVelocity {
                 track.vetoed = true
@@ -262,7 +286,8 @@ final class TouchGestureManager {
                 startTime: now,
                 startPos: touch.normalized.position,
                 lastPos: touch.normalized.position,
-                beganDuringMomentum: SharedState.shared.momentumActive
+                beganDuringMomentum: SharedState.shared.momentumActive,
+                sawMultipleContacts: hasMultipleContacts
             )
             activeTouches[id] = track
         }
@@ -287,7 +312,15 @@ final class TouchGestureManager {
             return
         }
 
-        guard settings.twoFingerTapEnabled || settings.threeFingerTapEnabled else {
+        // 接触中に一度も複数指を観測していないトラックは 2本指/3本指の構成要素に
+        // なりえないため、グループ化の待ち(twoFingerSyncWindow * 2)を挟まず即発火する。
+        // ここを待たせると 1本指クリック全体に体感できる遅延が乗る
+        guard track.sawMultipleContacts else {
+            // ゾーン要求はグループ確定側の 1本ケースと同一条件に揃える
+            guard track.inZone else {
+                DebugFeed.shared.pushEvent(TapFailureReason.outOfZone.localizedDescription)
+                return
+            }
             fireOneFingerTap(track: track, settings: settings)
             return
         }
@@ -367,7 +400,8 @@ final class TouchGestureManager {
             MMTLog.log("[診断] 1本指: oneFingerTapEnabled=false のため不発")
             return
         }
-        if Double(track.lastPos.x) > settings.rightZoneMinX {
+        // 常時左クリック設定では右ゾーンを評価しない。右クリックは物理クリックに任せる
+        if !settings.tapAlwaysLeftClick, Double(track.lastPos.x) > settings.rightZoneMinX {
             fireClick(button: .right, reason: NSLocalizedString("1本指タップ(右)", comment: "タップ成立イベント種別"))
         } else {
             fireClick(button: .left, reason: NSLocalizedString("1本指タップ(左)", comment: "タップ成立イベント種別"))

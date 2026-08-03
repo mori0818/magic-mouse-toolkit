@@ -10,6 +10,8 @@ extension Notification.Name {
 struct SettingsSnapshot {
     var enabled: Bool
     var oneFingerTapEnabled: Bool
+    /// ONのとき1本指タップは位置に関係なく常に左クリック。右クリックは物理クリックのみになる
+    var tapAlwaysLeftClick: Bool
     var twoFingerTapEnabled: Bool
     var threeFingerTapEnabled: Bool
     var threeFingerTapAction: ActionKind
@@ -51,6 +53,7 @@ final class AppSettings {
     enum Key {
         static let enabled = "mmt.enabled"
         static let oneFingerTapEnabled = "mmt.tap1.enabled"
+        static let tapAlwaysLeftClick = "mmt.tap1.alwaysLeft"
         static let twoFingerTapEnabled = "mmt.tap2.enabled"
         static let threeFingerTapEnabled = "mmt.tap3.enabled"
         static let threeFingerTapAction = "mmt.tap3.action"
@@ -80,9 +83,9 @@ final class AppSettings {
         static let trackpadModeGain = "mmt.trackpad.gain"
     }
 
-    /// 3本指タップの既定アクション: 未録画の空マクロ。ユーザーが設定画面で録画するまで何も起きない。
+    /// 3本指タップの既定アクション: トラックパッドモード切替。有効化しただけで意味のある動作をする。
     private static let defaultThreeFingerTapActionJSON: String = {
-        let action = ActionKind.macro([])
+        let action = ActionKind.toggleTrackpadMode
         guard let data = try? JSONEncoder().encode(action),
               let json = String(data: data, encoding: .utf8) else { return "" }
         return json
@@ -91,6 +94,7 @@ final class AppSettings {
     static let defaultValues: [String: Any] = [
         Key.enabled: true,
         Key.oneFingerTapEnabled: true,
+        Key.tapAlwaysLeftClick: false,
         Key.twoFingerTapEnabled: true,
         Key.threeFingerTapEnabled: false,
         Key.threeFingerTapAction: defaultThreeFingerTapActionJSON,
@@ -141,6 +145,11 @@ final class AppSettings {
     var oneFingerTapEnabled: Bool {
         get { defaults.bool(forKey: Key.oneFingerTapEnabled) }
         set { defaults.set(newValue, forKey: Key.oneFingerTapEnabled); notifyChanged() }
+    }
+    /// ONのとき1本指タップは位置に関係なく常に左クリック。右クリックは物理クリックのみになる
+    var tapAlwaysLeftClick: Bool {
+        get { defaults.bool(forKey: Key.tapAlwaysLeftClick) }
+        set { defaults.set(newValue, forKey: Key.tapAlwaysLeftClick); notifyChanged() }
     }
     var twoFingerTapEnabled: Bool {
         get { defaults.bool(forKey: Key.twoFingerTapEnabled) }
@@ -279,6 +288,7 @@ final class AppSettings {
         SettingsSnapshot(
             enabled: enabled,
             oneFingerTapEnabled: oneFingerTapEnabled,
+            tapAlwaysLeftClick: tapAlwaysLeftClick,
             twoFingerTapEnabled: twoFingerTapEnabled,
             threeFingerTapEnabled: threeFingerTapEnabled,
             threeFingerTapAction: threeFingerTapAction,
