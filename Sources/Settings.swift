@@ -79,9 +79,9 @@ final class AppSettings {
         static let trackpadModeGain = "mmt.trackpad.gain"
     }
 
-    /// 3本指タップの既定アクション: トラックパッドモード切替。有効化しただけで意味のある動作をする。
+    /// 3本指タップの既定アクション: マクロ(未録画時は空)。
     private static let defaultThreeFingerTapActionJSON: String = {
-        let action = ActionKind.toggleTrackpadMode
+        let action = ActionKind.macro([])
         guard let data = try? JSONEncoder().encode(action),
               let json = String(data: data, encoding: .utf8) else { return "" }
         return json
