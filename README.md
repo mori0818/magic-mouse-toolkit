@@ -3,7 +3,7 @@
 Magic Mouse Toolkit is an open-source macOS utility that adds configurable gestures
 and a virtual trackpad mode to Apple Magic Mouse.
 
-現在は日本語UIです。英語UIを含むローカライズ基盤は公開後の開発項目です。
+日本語・英語UIに対応しています(`AppleLanguages`のシステム設定に従います)。
 
 ## Features
 
