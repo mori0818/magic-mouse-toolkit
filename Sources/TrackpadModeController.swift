@@ -26,6 +26,8 @@ final class TrackpadModeController: ObservableObject {
 
     private let drainQueue = DispatchQueue(label: "com.mori0818.magicmousetoolkit.trackpadmode.drain")
     private var drainTimer: DispatchSourceTimer?
+    /// drainQueue専用。他スレッドから触らないこと
+    private lazy var moveEventSource = CGEventSource(stateID: .hidSystemState)
 
     // 全ディスプレイのbounds(CG座標・左上原点)。120Hzのdrainループから毎回
     // CGGetActiveDisplayListを呼ぶのは避け、着脱/配置変更通知でのみ更新する。
@@ -140,15 +142,18 @@ final class TrackpadModeController: ObservableObject {
     private func deactivate() {
         guard isActive else { return }
         isActive = false
-        SharedState.shared.trackpadModeActive = false
+
+        // trackpadModeActive を落とす前に追跡状態を先に畳んでおく。
+        // 先に落とすと、その瞬間に走っているMTコールバックが中途半端な
+        // trackedID/アキュムレータを読む余地が理論上生まれるため
+        drainTimer?.cancel()
+        drainTimer = nil
+        trackedID = nil
         SharedState.shared.trackpadScrollPassthrough = false
         SharedState.shared.trackpadMomentumEligibleUntil = -1e9
         SharedState.shared.trackpadScrollOwner = 0
         SharedState.shared.fingerCount = 0
-
-        drainTimer?.cancel()
-        drainTimer = nil
-        trackedID = nil
+        SharedState.shared.trackpadModeActive = false
 
         MMTLog.log("[診断] TrackpadMode: 無効化")
         TrackpadModeHUD.flash(active: false)
@@ -346,7 +351,7 @@ final class TrackpadModeController: ObservableObject {
                 let target = CGPoint(x: current.x + dx, y: current.y + dy)
                 let resolved = resolvedPosition(current: current, target: target)
 
-                if let src = CGEventSource(stateID: .hidSystemState),
+                if let src = moveEventSource,
                    let move = CGEvent(
                         mouseEventSource: src,
                         mouseType: .mouseMoved,
@@ -364,7 +369,7 @@ final class TrackpadModeController: ObservableObject {
         }
 
         if togglePending {
-            DispatchQueue.main.async { TrackpadModeController.shared.toggle() }
+            DispatchQueue.main.async { [weak self] in self?.toggle() }
         }
     }
 }

@@ -13,6 +13,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var deviceStatusItem: NSMenuItem?
     private var batteryStatusItem: NSMenuItem?
     private var openAccessibilityItem: NSMenuItem?
+    private var enabledMenuItem: NSMenuItem?
 
     /// Dock/Finderから再度開かれたとき設定ウィンドウを表示する
     func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
@@ -82,8 +83,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 MMTLog.log("[自己診断] 設定ウィンドウの座標が取得できず中止")
                 return
             }
-            NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
+            var monitor: Any?
+            monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown]) { event in
                 MMTLog.log("[自己診断] 自ウィンドウがleftMouseDownを受領(着弾確認)")
+                if let monitor { NSEvent.removeMonitor(monitor) }
                 return event
             }
             // AppKit座標(左下原点)→CGEvent座標(左上原点)。タイトルバー内の点を狙う
@@ -95,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         MMTLog.log("終了")
+        MacroRecorder.shared.stop()
         PermissionMonitor.stop()
         EventInterceptor.shared.stop()
         MultitouchDeviceManager.shared.stopHotplugMonitoring()
@@ -136,6 +140,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc private func willSleep() {
         MMTLog.log("スリープ準備: タッチ監視を停止")
+        // トラックパッドモードを有効にしたままスリープすると、復帰後にMTデバイスが
+        // 再初期化される一方でモードのフラグだけが残り、カーソルが操作不能になる
+        if TrackpadModeController.shared.isActive {
+            TrackpadModeController.shared.toggle()
+        }
         MultitouchDeviceManager.shared.stop()
     }
 
@@ -187,6 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         enabledItem.target = self
         enabledItem.state = AppSettings.shared.enabled ? .on : .off
         menu.addItem(enabledItem)
+        enabledMenuItem = enabledItem
 
         menu.addItem(.separator())
 
@@ -282,15 +292,14 @@ extension AppDelegate: NSMenuDelegate {
         }
 
         // 有効トグルの状態を同期（状態表示の後、セパレータの次）
-        for item in menu.items where item.action == #selector(toggleEnabled) {
-            item.state = AppSettings.shared.enabled ? .on : .off
-        }
+        enabledMenuItem?.state = AppSettings.shared.enabled ? .on : .off
     }
 }
 
 extension AppDelegate: NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         DebugFeed.shared.isActive = false
+        MacroRecorder.shared.stop()
         settingsWindow = nil
     }
 }

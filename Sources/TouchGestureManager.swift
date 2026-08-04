@@ -215,12 +215,15 @@ final class TouchGestureManager {
         if !settings.enabled {
             SharedState.shared.fingerCount = 0
             activeTouches.removeAll()
+            clearPendingGroup()
             return
         }
 
         // トラックパッドモード中は通常のタップ/ジェスチャ経路を完全にバイパスし、
         // 単一指のストローク/タップ判定を TrackpadModeController に専有させる。
         if SharedState.shared.trackpadModeActive {
+            activeTouches.removeAll()
+            clearPendingGroup()
             TrackpadModeController.shared.handleContactFrame(touches: touches, timestamp: now, settings: settings)
             return
         }
@@ -359,6 +362,8 @@ final class TouchGestureManager {
         // (指の本数自体が意図表明であり、ゾーン必須にすると3本を範囲内に収める操作が非現実的なため)
         switch group.count {
         case 1:
+            // 1本指タップ自体が無効なら、圏外判定のDebugFeed通知(誤解を招く)を出す前に抜ける
+            guard settings.oneFingerTapEnabled else { return }
             guard group[0].inZone else {
                 DebugFeed.shared.pushEvent(TapFailureReason.outOfZone.localizedDescription)
                 return
@@ -393,6 +398,16 @@ final class TouchGestureManager {
 
     private func cancelPendingTimer() {
         pendingTimer.schedule(deadline: .distantFuture)
+    }
+
+    /// 無効化・トラックパッドモード移行時に保留中のグループを破棄する。
+    /// pendingGroup は直列キュー上でのみ読み書きするため、破棄もそのキューへ載せる
+    private func clearPendingGroup() {
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.pendingGroup = []
+            self.cancelPendingTimer()
+        }
     }
 
     private func fireOneFingerTap(track: TouchTrack, settings: SettingsSnapshot) {

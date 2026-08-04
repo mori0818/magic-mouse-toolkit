@@ -29,6 +29,8 @@ final class MacroRecorder: ObservableObject {
     private var runLoopSource: CFRunLoopSource?
     private var startTime: Double = 0
     private var lastFlags: CGEventFlags = []
+    /// 無操作でも maxDuration で確実に止めるためのタイマー世代。stop() で無効化する
+    private var timeoutGeneration = 0
     /// 録画終了時(手動stop・自動停止とも)に録画結果を保存先へ渡すクロージャ。
     /// 保存先を呼び出し側が確定させることで、複数の割り当て先での混線を防ぐ。
     private var onStop: (([RecordedKeyEvent]) -> Void)?
@@ -68,10 +70,19 @@ final class MacroRecorder: ObservableObject {
         CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
         isRecording = true
         MMTLog.log("MacroRecorder: 録画開始")
+
+        // 無操作でも maxDuration で確実に止まるよう、append() の判定とは別にタイマーを仕込む
+        timeoutGeneration += 1
+        let myGeneration = timeoutGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.maxDuration) { [weak self] in
+            guard let self, self.timeoutGeneration == myGeneration else { return }
+            self.stop()
+        }
     }
 
     func stop() {
         guard eventTap != nil else { return }
+        timeoutGeneration += 1
         if let source = runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
         }

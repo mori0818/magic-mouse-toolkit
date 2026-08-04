@@ -89,6 +89,22 @@ final class EventInterceptor {
         }
         eventTap = nil
         runLoopSource = nil
+        // タップ破棄後に再開しても押下中・変換途中の状態が残らないようにする
+        // （残っていると再有効化後の最初のクリックが誤ってミドルUpに変換される）
+        clearSharedInputState()
+    }
+
+    /// 押下中・変換途中・スクロール受け渡し中の共有状態を初期化する。
+    /// タップ無効化(updateEnabledState)・タップ破棄(stop)の両方から呼ぶ
+    private func clearSharedInputState() {
+        let shared = SharedState.shared
+        shared.convertingToMiddle = false
+        shared.leftButtonDown = false
+        shared.rightButtonDown = false
+        shared.momentumActive = false
+        shared.trackpadScrollPassthrough = false
+        shared.trackpadMomentumEligibleUntil = -1e9
+        shared.trackpadScrollOwner = 0
     }
 
     @objc private func settingsChanged() {
@@ -107,15 +123,7 @@ final class EventInterceptor {
         let enabled = AppSettings.shared.enabled
         if !enabled {
             // OFF 中は mouseUp を取りこぼすため、変換途中・押下中の状態を必ずクリアする
-            // （残っていると再有効化後の最初のクリックが誤ってミドルUpに変換される）
-            let shared = SharedState.shared
-            shared.convertingToMiddle = false
-            shared.leftButtonDown = false
-            shared.rightButtonDown = false
-            shared.momentumActive = false
-            shared.trackpadScrollPassthrough = false
-            shared.trackpadMomentumEligibleUntil = -1e9
-            shared.trackpadScrollOwner = 0
+            clearSharedInputState()
         }
         CGEvent.tapEnable(tap: tap, enable: enabled)
         MMTLog.log("イベントタップ: \(enabled ? "有効化" : "無効化")")
@@ -204,7 +212,7 @@ final class EventInterceptor {
             // 横スクロール無効化: Axis2(横)の3種のデルタ表現(整数生値・整数ポイント値・
             // 固定小数点値)をすべてゼロ化する。慣性フェーズのイベントも同じフィールドを
             // 持つため、この処理だけで横方向の慣性スクロールも止まる。
-            if SettingsStore.shared.snapshot.verticalScrollOnly {
+            if SettingsStore.shared.verticalScrollOnly {
                 event.setIntegerValueField(.scrollWheelEventDeltaAxis2, value: 0)
                 event.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: 0)
                 event.setDoubleValueField(.scrollWheelEventFixedPtDeltaAxis2, value: 0)
@@ -217,8 +225,7 @@ final class EventInterceptor {
                 return Unmanaged.passUnretained(event)
             }
             shared.leftButtonDown = true
-            let settings = SettingsStore.shared.snapshot
-            if settings.middleClickEnabled
+            if SettingsStore.shared.middleClickEnabled
                 && shared.fingerCount == 2
                 && (now - shared.lastFrameAt) < 0.08 {
                 shared.convertingToMiddle = true
