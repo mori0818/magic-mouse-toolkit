@@ -1,118 +1,178 @@
-# Magic Mouse Toolkit 仕様書
+# Magic Mouse Toolkit Specification
 
-## 背景・目的
+## Background and purpose
 
-Magic Mouseに以下の2つのカスタム操作を追加する:
-1. タップでのクリック(左/右)
-2. 2本指操作でのミドルクリック
+Add the following two custom operations to Magic Mouse:
+1. Click (left/right) via tap
+2. Middle click via a two-finger operation
 
-既存の市販/OSSツール(MiddleClick, MouseToucher)を使って検証した結果、以下の課題が判明した:
+Testing with existing commercial/OSS tools (MiddleClick, MouseToucher)
+revealed the following issues:
 
-- **MiddleClick**: トラックパッドにも反応してしまい、Magic Mouse専用に絞れない
-- **MouseToucher**: Magic Mouse専用(内蔵トラックパッドを除外するロジックが元から実装済み)。ただし以下の運用上の問題があった:
-  - 感度・反応範囲の調整のたびにソースコード書き換え→リビルドが必要
-  - ad-hoc署名ではリビルド時にコード署名ハッシュ(cdhash)が変わり、macOSからアクセシビリティ権限の再許可を求められる場合がある。権限を変更する前にアプリを終了する安全手順は`SAFETY.md`を参照
-  - ミドルクリック機能がない
+- **MiddleClick**: also responds to the trackpad, so it cannot be restricted
+  to Magic Mouse only
+- **MouseToucher**: Magic Mouse-specific (already has logic built in to
+  exclude the built-in trackpad). However, it had the following operational
+  problems:
+  - Every adjustment of sensitivity/response range requires rewriting the
+    source code and rebuilding
+  - With ad-hoc signing, rebuilding changes the code-signing hash (cdhash),
+    which can cause macOS to prompt for re-approval of accessibility
+    permission. See `SAFETY.md` for the safe procedure of quitting the app
+    before changing permissions
+  - No middle-click functionality
 
-これらを解決するため、両ツールの機能を統合し、**設定をUIから変更できる(リビルド不要)独自アプリを新規に開発する**。
+To solve these, we will integrate the functionality of both tools and
+**newly develop our own app whose settings can be changed from the UI
+(no rebuild required)**.
 
-## 動作環境
+## Operating environment
 
-- macOS(Apple Silicon / Intel 両対応のUniversal Binary)
-- Magic Mouse(Bluetooth接続)
-- 対象デバイスは外部マルチタッチデバイスのみ(内蔵トラックパッドは`MTDeviceIsBuiltIn`で判定して除外する)
+- macOS (Universal Binary supporting both Apple Silicon and Intel)
+- Magic Mouse (Bluetooth connection)
+- Target devices are external multitouch devices only (the built-in trackpad
+  is detected and excluded via `MTDeviceIsBuiltIn`)
 
-## 機能要件
+## Functional requirements
 
-### 1. 1本指タップ → 左クリック / 右クリック
+### 1. One-finger tap → left click / right click
 
-- Magic Mouse表面を指1本で軽くタップすると、通常の左クリックが発生する
-- タップ位置のX座標が閾値(可変)を超えている場合は右クリックとして扱う(既存踏襲: 初期値 X > 0.6)
-- 判定条件(タップとみなす条件):
-  - 接触時間が「タップ最大時間」以下
-  - 接触中の指の移動量が「移動許容量」以下
-  - スクロール操作との誤認を避けるため、指の累積移動距離・瞬間速度も判定に使う(下記「スクロール誤反応対策」参照)
+- Lightly tapping the Magic Mouse surface with one finger produces a normal
+  left click
+- If the X coordinate of the tap position exceeds a (variable) threshold, it
+  is treated as a right click (carried over from the existing tool: default
+  X > 0.6)
+- Conditions for judging a tap:
+  - Contact duration is at or below the "maximum tap duration"
+  - The amount of finger movement during contact is at or below the
+    "movement tolerance"
+  - To avoid misidentifying a tap as a scroll operation, the finger's
+    cumulative movement distance and instantaneous speed are also used in
+    the judgment (see "Scroll misfire prevention" below)
 
-### 2. 2本指タップ → 左クリック
+### 2. Two-finger tap → left click
 
-- 指2本でほぼ同時にタップすると、左クリックとして扱う
-- 1本指タップと同じ有効範囲・感度判定を適用する(初期方針。要検証)
+- Tapping with two fingers at nearly the same time is treated as a left
+  click
+- Applies the same effective range and sensitivity judgment as the
+  one-finger tap (initial policy; to be verified)
 
-### 3. 2本指クリック(物理押し込み) → ミドルクリック
+### 3. Two-finger click (physical press) → middle click
 
-- 指2本を乗せた状態でMagic Mouse本体を物理的に押し込む(通常のクリック動作)と、その入力を**ミドルクリックに置き換える**
-- 実装方式: `CGEventTap`でシステムレベルの物理クリックイベント(`leftMouseDown`/`leftMouseUp`)を監視し、クリック発生時点でのマルチタッチ接触指数が2本であれば、元の左クリックイベントを握りつぶし(swallow)、代わりにミドルクリックイベント(`otherMouseDown`/`otherMouseUp`)を合成して送出する
-- 指が1本(通常クリック)や3本以上の場合はイベントを変更せずそのまま通す
+- When the Magic Mouse body is physically pressed down (a normal click
+  action) while two fingers are resting on it, that input is **replaced
+  with a middle click**
+- Implementation approach: monitor system-level physical click events
+  (`leftMouseDown`/`leftMouseUp`) with a `CGEventTap`. If the number of
+  multitouch contact fingers at the moment the click occurs is two, swallow
+  the original left-click event and instead synthesize and dispatch a
+  middle-click event (`otherMouseDown`/`otherMouseUp`)
+- If there is one finger (normal click) or three or more fingers, the event
+  is passed through unchanged
 
-### 4. 有効範囲(タップ反応ゾーン)をUIから調整可能
+### 4. Effective range (tap response zone) adjustable from the UI
 
-- Magic Mouse表面を正規化座標(0.0〜1.0)で扱い、タップが**開始した位置**がこの矩形範囲内にある場合のみクリックとして成立させる
-- UI上で以下をパーセント単位(0〜100%)で調整できる:
-  - X方向: 最小値・最大値(横方向の範囲)
-  - Y方向: 最小値・最大値(縦方向の範囲。Y値が高いほど前方 = 指を伸ばして届く先端側であることを検証済み)
-- 変更は即座に反映され、アプリ再起動不要(UserDefaultsに保存し、実行中のインスタンスがリアルタイムに読み込む)
+- The Magic Mouse surface is handled in normalized coordinates (0.0–1.0),
+  and a click is only registered if the position where the tap **started**
+  falls within this rectangular range
+- The following can be adjusted from the UI, in percent units (0–100%):
+  - X direction: minimum and maximum values (horizontal range)
+  - Y direction: minimum and maximum values (vertical range; verified that a
+    higher Y value corresponds to the front — the tip end reached by
+    extending the finger)
+- Changes take effect immediately without restarting the app (saved to
+  UserDefaults, and read in real time by the running instance)
 
-### 5. 感度をUIから数値で調整可能
+### 5. Sensitivity adjustable numerically from the UI
 
-「感度」は複数の内部パラメータの総称。UI上でスライダー等により調整する。
+"Sensitivity" is a collective term for several internal parameters. It is
+adjusted in the UI via sliders, etc.
 
-| パラメータ | 説明 | 初期値(参考: MouseToucher検証時の最終値) |
+| Parameter | Description | Default (reference: final value from MouseToucher testing) |
 |---|---|---|
-| タップ最大時間 | 接触時間がこれを超えるとタップ不成立(秒) | 0.16 |
-| カーソル移動許容量 | タップ中のカーソル移動量の上限(スクリーン座標系) | 0.045 |
-| 指の直線移動許容量 | タップ開始点から現在点までの直線距離の上限(表面正規化座標0-1) | 0.09 |
-| 指の累積移動距離許容量 | タップ中に指が動いた総経路長の上限(往復スクロール対策、表面正規化座標0-1) | 0.07 |
-| 瞬間速度許容量 | タップ中に観測された最大瞬間速度の上限(表面正規化座標/秒、フリックスクロール対策) | 要キャリブレーション(前回セッションで測定中断) |
+| Maximum tap duration | If contact duration exceeds this, the tap is not registered (seconds) | 0.16 |
+| Cursor movement tolerance | Upper limit of cursor movement amount during a tap (screen coordinate system) | 0.045 |
+| Finger straight-line movement tolerance | Upper limit of the straight-line distance from the tap start point to the current point (surface normalized coordinates 0–1) | 0.09 |
+| Finger cumulative movement distance tolerance | Upper limit of the total path length the finger traveled during a tap (countermeasure for back-and-forth scrolling, surface normalized coordinates 0–1) | 0.07 |
+| Instantaneous speed tolerance | Upper limit of the maximum instantaneous speed observed during a tap (surface normalized coordinates/second, countermeasure for flick scrolling) | Needs calibration (measurement was interrupted in the previous session) |
 
-UIでは、これらを個別スライダーで細かく調整できるようにする(「かんたんモード」で1つのスライダーに集約する案は今回は見送り、要望があれば追加検討)。
+In the UI, these will be individually adjustable via fine-grained sliders
+(the idea of consolidating them into a single slider for an "easy mode" is
+deferred for now and will be considered further if requested).
 
-### 6. スクロール誤反応対策
+### 6. Scroll misfire prevention
 
-タップ判定とスクロール判定を区別するため、以下を組み合わせて使う(既存MouseToucher検証で得た知見):
+To distinguish tap judgment from scroll judgment, the following are used in
+combination (knowledge gained from existing MouseToucher testing):
 
-- 直線移動距離チェック(開始点→終了点)
-- 累積移動距離チェック(往復スクロールで開始点と終了点が近くなるケースに対応)
-- 瞬間速度チェック(MTTouchの`velocity`フィールドを利用。素早いフリックスクロールは移動距離が小さくても速度が高いため、距離ベースの判定をすり抜けることがある。これを検出する)
+- Straight-line movement distance check (start point → end point)
+- Cumulative movement distance check (handles cases where back-and-forth
+  scrolling brings the start and end points close together)
+- Instantaneous speed check (uses the `velocity` field of MTTouch. A fast
+  flick scroll can have a high speed even when the movement distance is
+  small, allowing it to slip through the distance-based judgment. This
+  detects that case)
 
-### 7. 設定UI
+### 7. Settings UI
 
-- メニューバー常駐アプリ(Dockアイコンなし、`LSUIElement`)
-- メニューバーアイコンクリックで以下のメニューを表示:
-  - 有効/無効の切り替え
-  - 「設定を開く…」→ 設定ウィンドウを表示
-  - ログイン時に起動(トグル。または既存通りシステム設定のログイン項目で管理)
-  - このアプリについて
-  - 終了
-- 設定ウィンドウ(SwiftUI):
-  - 有効範囲設定: X最小/最大、Y最小/最大(パーセントスライダー)。可能であればMagic Mouseの図形上に矩形をリアルタイムで重ねて視覚的に確認できるプレビューを検討(初期実装では簡易表示でも可)
-  - 感度設定: 上記5パラメータをスライダーまたは数値入力で調整
-  - デバッグ用: タップ座標のライブ表示(キャリブレーション支援。現在地点のX/Y座標と、直近のタップがゾーン内/範囲外だったかを表示)
+- Menu-bar resident app (no Dock icon, `LSUIElement`)
+- Clicking the menu bar icon shows the following menu:
+  - Toggle enabled/disabled
+  - "Open Settings…" → shows the settings window
+  - Launch at login (toggle; or manage as before via the Login Items in
+    System Settings)
+  - About this app
+  - Quit
+- Settings window (SwiftUI):
+  - Effective range settings: X min/max, Y min/max (percent sliders). If
+    possible, consider a preview that overlays the rectangle in real time on
+    a graphic of the Magic Mouse for visual confirmation (a simplified
+    display is acceptable for the initial implementation)
+  - Sensitivity settings: adjust the above 5 parameters via sliders or
+    numeric input
+  - For debugging: live display of tap coordinates (to assist calibration;
+    shows the current X/Y coordinates and whether the most recent tap was
+    inside/outside the zone)
 
-## 非機能要件
+## Non-functional requirements
 
-### アクセシビリティ権限の安定化
+### Stabilizing accessibility permission
 
-- コード署名は**安定した自己署名証明書**(ad-hocではなく、固定のCommon Nameを持つ自己署名証明書)を使う
-- これにより、感度・機能追加のためにリビルドしても、権限(TCC)が失効しない
-- 証明書のセットアップ手順はREADME/コメントに残す(既にMouseToucherで検証済みの手順を流用)
+- Use a **stable self-signed certificate** for code signing (a self-signed
+  certificate with a fixed Common Name, not ad-hoc)
+- This ensures that permission (TCC) is not revoked when rebuilding to add
+  sensitivity adjustments or new features
+- Record the certificate setup procedure in the README/comments (reuse the
+  procedure already verified with MouseToucher)
 
-### 権限要求
+### Permission requests
 
-- Accessibility権限(`AXIsProcessTrustedWithOptions`): タップ→クリック合成、および物理クリックのイベントタップ・置き換えに必要
-- 初回起動時に権限が無い場合は、システム設定を開くよう促すアラートを表示する(既存MouseToucher踏襲)
+- Accessibility permission (`AXIsProcessTrustedWithOptions`): required for
+  synthesizing clicks from taps, and for the event tap/replacement of
+  physical clicks
+- If permission is not granted on first launch, display an alert prompting
+  the user to open System Settings (carried over from existing MouseToucher)
 
-## 未確定事項・要議論
+## Open items / to be discussed
 
-- 2本指タップ(左クリック)の有効範囲は1本指タップと共有するか、別途設定可能にするか
-- 3本指ジェスチャーへの対応要否(今回のスコープには含めない。BetterTouchTool等の代替候補は別途検討済み)
-- 瞬間速度許容量の具体的な初期値(キャリブレーションが必要。実機でのログ収集により決定する)
-- 設定ウィンドウでのMagic Mouse形状上への範囲プレビュー表示の実装可否・優先度
+- Whether the effective range for the two-finger tap (left click) is shared
+  with the one-finger tap, or configurable separately
+- Whether support for three-finger gestures is needed (not included in this
+  scope; alternative candidates such as BetterTouchTool have been considered
+  separately)
+- The specific default value for the instantaneous speed tolerance
+  (calibration needed; to be determined by collecting logs on real hardware)
+- Feasibility and priority of implementing the range preview overlaid on the
+  Magic Mouse shape in the settings window
 
-## 開発の進め方
+## Development approach
 
-1. 本仕様書のレビュー・合意
-2. コアロジック(マルチタッチ検出・タップ/クリック判定・設定読み込み)の実装
-3. 設定UI(SwiftUI)の実装
-4. 2本指物理クリック→ミドルクリック変換(CGEventTap)の実装
-5. 実機での感度・範囲キャリブレーション(UIから調整しながら検証、リビルド不要)
-6. MiddleClick・MouseToucherの無効化・アンインストール検討
+1. Review and agreement on this specification
+2. Implement core logic (multitouch detection, tap/click judgment, settings
+   loading)
+3. Implement the settings UI (SwiftUI)
+4. Implement two-finger physical click → middle click conversion
+   (CGEventTap)
+5. Calibrate sensitivity and range on real hardware (verify while adjusting
+   from the UI, no rebuild required)
+6. Consider disabling/uninstalling MiddleClick and MouseToucher

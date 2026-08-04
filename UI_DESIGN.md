@@ -1,95 +1,132 @@
-# Magic Mouse Toolkit UI/デザイン検討
+# Magic Mouse Toolkit UI/design considerations
 
-> **【失効】このドキュメントは 2026-07-02 時点の初期検討であり、現行実装には適用されない。**
-> 「macOS標準そのままの無装飾」「480×520pt」「Stitchで検討」といった方針は 2026-07-06 の
-> Liquid Glass 方針確定によりすべて廃止済み。**現行の正本は [DESIGN.md](./DESIGN.md) と
-> `Sources/DesignSystem.swift`。** 以下は経緯の記録としてのみ残す。
+> **[SUPERSEDED] This document is an early-stage exploration as of 2026-07-02 and does not apply to the current implementation.**
+> Directions such as "undecorated, plain macOS standard look," "480×520pt," and
+> "explore with Stitch" were all dropped following the Liquid Glass direction
+> finalized on 2026-07-06. **The current source of truth is [DESIGN.md](./DESIGN.md)
+> and `Sources/DesignSystem.swift`.** The following is kept only as a historical record.
 
-作成日: 2026-07-02。[SPEC.md](./SPEC.md)の「設定UI」要件を具体化する。実装はSwiftUI(AppKit統合)、デザインはStitchで検討予定とのことなので、Stitch側の制作(DESIGN.md)に渡すための前提整理も兼ねる。
+Written 2026-07-02. Fleshes out the "Settings UI" requirements from
+[SPEC.md](./SPEC.md). The implementation will be SwiftUI (integrated with
+AppKit), and since the plan was to explore the design in Stitch, this also
+serves to organize the premises to hand off to the Stitch-side work (DESIGN.md).
 
-## デザイン方針
+## Design direction
 
-- **「作り込んだ独自デザイン」ではなく、macOS標準のSwiftUIコンポーネントそのままの見た目**を目指す
-- 配色・角丸・影などのカスタムスキンは基本的に使わない。`Toggle`, `Slider`, `Stepper`, `Form`, `Section`などネイティブコンポーネントの標準スタイルに任せる
-- 参考: システム設定アプリ自体(このセッションでずっと操作していた「システム設定」)や、Rectangle・AltTabなど、メニューバー常駐系ユーティリティの設定画面によくある、無装飾で機能的なレイアウト
-- ダークモード/ライトモードは自動追従(システムカラー `Color(.labelColor)` 等を使い、独自カラーパレットは持たない)
+- Aim for **the plain look of native macOS SwiftUI components**, not a
+  "polished custom design"
+- Avoid custom skinning such as colors, corner radii, or shadows in general.
+  Rely on the standard styling of native components like `Toggle`, `Slider`,
+  `Stepper`, `Form`, and `Section`
+- Reference: the undecorated, functional layouts common in the System
+  Settings app itself (which this session has been operating in throughout)
+  and in the settings screens of menu-bar-resident utilities such as
+  Rectangle and AltTab
+- Automatically follow dark mode/light mode (use system colors such as
+  `Color(.labelColor)`, with no custom color palette)
 
-## 画面構成
+## Screen layout
 
-### 1. メニューバードロップダウン(常駐アイコンをクリックした時)
+### 1. Menu bar dropdown (when clicking the resident icon)
 
-シンプルな`NSMenu`(SwiftUIではなくAppKitのネイティブメニュー、MouseToucher/MiddleClick踏襲):
+A simple `NSMenu` (a native AppKit menu, not SwiftUI, following MouseToucher/MiddleClick):
 
 ```
-✓ 有効
+✓ Enabled
 ────────────
-設定を開く…
+Open Settings…
 ────────────
-バージョン 1.0
-このアプリについて…
+Version 1.0
+About This App…
 ────────────
-終了                    ⌘Q
+Quit                    ⌘Q
 ```
 
-### 2. 設定ウィンドウ
+### 2. Settings window
 
-1枚のウィンドウ内をセクション分けする構成(タブは使わず、`Form` + `Section`で縦に並べる。macOSの「システム設定」の1ペイン内の見た目に近い)。ウィンドウサイズは目安 480×520pt 程度、リサイズ不可(ユーティリティアプリの設定画面として一般的)。
+A single window divided into sections (no tabs; laid out vertically with
+`Form` + `Section`, close to the look of a single pane in macOS System
+Settings). Window size is roughly 480×520pt, non-resizable (typical for a
+utility app's settings screen).
 
 ```
 ┌─────────────────────────────────┐
-│  Magic Mouse Toolkit 設定              │
+│  Magic Mouse Toolkit Settings          │
 ├─────────────────────────────────┤
-│  ○ 有効にする              [Toggle]│
+│  ○ Enable                  [Toggle]│
 │                                   │
-│  ── ジェスチャー ──────────────  │
-│  1本指タップで左/右クリック [Toggle]│
-│  2本指タップで左クリック    [Toggle]│
-│  2本指クリックでミドルクリック[Toggle]│
+│  ── Gestures ──────────────────  │
+│  One-finger tap = left/right click [Toggle]│
+│  Two-finger tap = left click    [Toggle]│
+│  Two-finger click = middle click[Toggle]│
 │                                   │
-│  ── 反応範囲 ──────────────────  │
-│  横方向    [====●────●====] 0-100%│
-│  縦方向    [========●==●==] 0-100%│
-│  (前方が高い値)                   │
+│  ── Detection range ───────────  │
+│  Horizontal [====●────●====] 0-100%│
+│  Vertical   [========●==●==] 0-100%│
+│  (higher value = further forward) │
 │                                   │
-│  ── 感度 ────────────────────  │
-│  タップ判定時間      [Slider] 0.16s│
-│  移動許容量          [Slider]      │
-│  スクロール誤反応対策 [Slider]      │
+│  ── Sensitivity ────────────────  │
+│  Tap detection time  [Slider] 0.16s│
+│  Movement tolerance  [Slider]      │
+│  Scroll-misfire guard [Slider]      │
 │                                   │
-│  ── デバッグ ──────────────────  │
-│  ▸ タップ座標のライブ表示(開閉可能) │
+│  ── Debug ──────────────────────  │
+│  ▸ Live tap coordinate display (collapsible) │
 │                                   │
 └─────────────────────────────────┘
 ```
 
-## コンポーネントマッピング(SwiftUIネイティブ)
+## Component mapping (native SwiftUI)
 
-| 要素 | SwiftUIコンポーネント | 備考 |
+| Element | SwiftUI component | Notes |
 |---|---|---|
-| 有効/無効、各ジェスチャーON/OFF | `Toggle` (`.toggleStyle(.switch)`) | システム標準のスイッチ型。装飾なし |
-| 感度パラメータ | `Slider` + 値ラベル | `Slider(value:in:) { Text(...) }` の標準形。数値はSlider横に`Text`で表示するのみ |
-| 反応範囲(X/Y各min-max) | 2連の`Slider`、または`RangeSlider`相当を自作 | SwiftUI標準に「範囲スライダー」はないため、min用・max用のSliderを2本並べるのが最もシンプルでネイティブ感を損なわない(凝ったカスタムトラックUIは作らない方針に合致) |
-| セクション区切り | `Form` + `Section(header:)` | macOS標準の設定画面そのものの構造 |
-| デバッグ座標表示 | `DisclosureGroup` + `Text`(等幅フォント) | 折りたたみ可能にして、普段は目に入らないようにする |
-| ウィンドウ全体 | `Form` を `NSHostingController` でラップし、通常の`NSWindow`に載せる | Menu bar appからウィンドウを開く定番パターン |
+| Enable/disable, each gesture on/off | `Toggle` (`.toggleStyle(.switch)`) | The system-standard switch style. No decoration |
+| Sensitivity parameters | `Slider` + value label | The standard `Slider(value:in:) { Text(...) }` form. The numeric value is shown only as a `Text` next to the Slider |
+| Detection range (X/Y each min-max) | Two `Slider`s in tandem, or a custom-built `RangeSlider` equivalent | SwiftUI has no built-in "range slider," so placing a min Slider and a max Slider side by side is the simplest and keeps the native feel intact (consistent with the policy of not building an elaborate custom track UI) |
+| Section dividers | `Form` + `Section(header:)` | The very structure of the macOS standard settings screen |
+| Debug coordinate display | `DisclosureGroup` + `Text` (monospaced font) | Made collapsible so it stays out of view during normal use |
+| Overall window | Wrap a `Form` in an `NSHostingController` and host it in a regular `NSWindow` | The standard pattern for opening a window from a menu bar app |
 
-## 「Stitchで作る」場合の注意点
+## Notes on building this "in Stitch"
 
-StitchはWeb/HTML的なモックアップ生成が得意なツールのため、そのまま書き出すとカード影・グラデーション・独自の角丸トグルなど「アプリっぽいが macOS ネイティブではない」見た目になりやすい。**今回の要望(SwiftUI標準そのままの見た目)とは相性に注意が必要**:
+Stitch excels at producing web/HTML-style mockups, so exporting it directly
+tends to produce an "app-like but not macOS-native" look — card shadows,
+gradients, custom rounded toggles, and so on. **This needs care given this
+project's requirement (looking exactly like native SwiftUI)**:
 
-- Stitchで作る場合は、`taste-design`スキル(プレミアム・非ジェネリックなUIを志向する)は今回の方向性(装飾を避けたい)と逆なので使わない
-- 代わりに、Stitchのプロンプト側で「macOS native System Settings look, SF Pro font, native macOS switch toggles, no shadows, no gradients, no rounded cards, flat grouped list style like macOS Preferences」のように明示的に指定する
-- Stitchの出力(HTML/CSS)はあくまで**レイアウトと情報設計の参考**として使い、実装時は上記のコンポーネントマッピング表の通りSwiftUIネイティブ部品に置き換える(Stitchの見た目をそのままコード化しない)
-- `DESIGN.md`を作る場合も、色は「システムカラーに従う」「角丸・影は使わない」ことを明記しておくと、後工程で迷わない
+- When building in Stitch, don't use the `taste-design` skill (which aims for
+  a premium, non-generic UI), since it runs counter to this project's
+  direction of avoiding decoration
+- Instead, explicitly specify in the Stitch prompt something like: "macOS
+  native System Settings look, SF Pro font, native macOS switch toggles, no
+  shadows, no gradients, no rounded cards, flat grouped list style like macOS
+  Preferences"
+- Treat Stitch's output (HTML/CSS) purely as **a reference for layout and
+  information design**; when implementing, replace it with native SwiftUI
+  components per the component-mapping table above (don't code up Stitch's
+  look as-is)
+- When producing `DESIGN.md`, also spell out that colors "follow system
+  colors" and that "no corner radii or shadows are used," so there's no
+  ambiguity downstream
 
-## タイポグラフィ・配色
+## Typography and color
 
-- フォント: `Font.system(...)`(San Francisco)をそのまま使用。独自フォント指定はしない
-- 文字サイズ: `Form`内はデフォルトのControl Size(macOSの設定画面と同じ見た目になる)
-- 配色: `Color(.controlAccentColor)`(トグルON時の色など)、`Color(.labelColor)`、`Color(.secondaryLabelColor)`のみ使用。独自のブランドカラーは持たない
-- アイコン: メニューバーアイコンはSF Symbols(`computermouse.fill`など、MouseToucher踏襲)を使い、独自アイコン作成は行わない
+- Font: use `Font.system(...)` (San Francisco) as-is. No custom font specified
+- Font size: default Control Size inside `Form` (matches the look of the
+  macOS settings screens)
+- Colors: use only `Color(.controlAccentColor)` (e.g., the color when a
+  toggle is on), `Color(.labelColor)`, and `Color(.secondaryLabelColor)`. No
+  custom brand color
+- Icon: use SF Symbols for the menu bar icon (e.g., `computermouse.fill`,
+  following MouseToucher); no custom icon is created
 
-## 未確定事項
+## Open questions
 
-- 反応範囲の可視化として「Magic Mouseの形をした図形の上に、現在の設定範囲を矩形で重ねて表示する」プレビューをやるかどうか(SPEC.mdの未確定事項と同じ)。今回のシンプル方針であれば、初期実装では見送り、数値スライダーのみで十分という判断もあり得る
-- 設定ウィンドウを`Form`スタイル(iOS風グループリスト)にするか、単純に`VStack`を並べるだけにするか → `Form`の方がmacOSネイティブの「システム設定」の見た目に近いため、`Form`方式を推奨
+- Whether to do a preview that visualizes the detection range — "overlay the
+  current range settings as a rectangle on a Magic-Mouse-shaped figure" (same
+  open question as in SPEC.md). Given this session's simple-first direction,
+  it may be reasonable to defer this for the initial implementation and rely
+  on numeric sliders alone
+- Whether the settings window should use `Form` style (iOS-like grouped list)
+  or simply stack `VStack`s → `Form` is recommended since it's closer to the
+  native macOS "System Settings" look

@@ -1,124 +1,135 @@
 # Magic Mouse Toolkit architecture
 
-Magic Mouse Toolkitは、Magic Mouseのマルチタッチ入力を読み取り、CGEventを使ってクリック、
-スクロール、カーソル移動、キーボードマクロへ変換するメニューバーアプリです。
+Magic Mouse Toolkit is a menu bar app that reads Magic Mouse multi-touch input and
+converts it into clicks, scrolling, cursor movement, and keyboard macros via CGEvent.
 
 ## Runtime
 
 - Swift 6
 - macOS 26 SDK
 - AppKit + SwiftUI
-- `swiftc`直接ビルド
+- Built directly with `swiftc`
 - arm64 / x86_64 Universal Binary
 - Bundle ID: `com.mori0818.magicmousetoolkit`
 
 ## Third-party provenance
 
-詳細な著作権表示とライセンスは
-[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)を参照してください。
+See [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for detailed copyright
+notices and licenses.
 
 ### MouseToucher
 
-[MouseToucher](https://github.com/meatpaste/mousetoucher)はMIT Licenseです。
-Magic Mouse Toolkitの初期プロトタイプでは、次の領域を起点として利用しました。
+[MouseToucher](https://github.com/meatpaste/mousetoucher) is MIT licensed.
+Magic Mouse Toolkit's early prototype used it as a starting point for the
+following areas:
 
-- `MultitouchSupport.framework`用のCブリッジ宣言
-- `MTDeviceCreateList`と`MTDeviceIsBuiltIn`によるデバイス列挙
-- `swiftc`と`lipo`を使うUniversal Binaryのビルド方式
-- アクセシビリティ権限要求の初期構成
-- タップ検出ステートマシンの初期設計
+- C bridge declarations for `MultitouchSupport.framework`
+- Device enumeration via `MTDeviceCreateList` and `MTDeviceIsBuiltIn`
+- The Universal Binary build approach using `swiftc` and `lipo`
+- Initial setup for requesting Accessibility permissions
+- The initial design of the tap-detection state machine
 
-現行コードでは、デバイスのretain／release、Bluetooth再接続、IOKit着脱通知、
-コールバック間共有状態、スクロールベト、マクロ、仮想トラックパッドなどを追加し、
-ファイル構成と実装を大きく再設計しています。それでも由来は実質的であるため、
-MouseToucherの著作権表示とMIT Licenseを継続して掲載します。
+The current code adds device retain/release, Bluetooth reconnection, IOKit
+attach/detach notifications, shared state across callbacks, scroll vetoes,
+macros, virtual trackpad mode, and more, and has substantially redesigned the
+file structure and implementation. Even so, because the provenance remains
+material, MouseToucher's copyright notice and MIT License continue to be
+included.
 
 ### MiddleClick
 
-[MiddleClick](https://github.com/artginzburg/MiddleClick)はGPL-3.0です。
-物理クリックイベントを破棄・再送信せず、同じCGEventのtypeとボタン番号を書き換えて
-ミドルクリックとして返す方式を参考・改変しています。
+[MiddleClick](https://github.com/artginzburg/MiddleClick) is GPL-3.0 licensed.
+Its approach of rewriting the type and button number of the same CGEvent and
+resending it as a middle click — rather than discarding and reposting the
+physical click event — was referenced and adapted here.
 
-Magic Mouse Toolkit全体をGPL-3.0-onlyで公開することで、この由来と互換性を保ちます。
+Magic Mouse Toolkit is distributed in its entirety under GPL-3.0-only to
+preserve compatibility with this provenance.
 
 ## Components
 
 ### `MultitouchDevice.swift`
 
-- MultitouchSupportからデバイスを列挙
-- Magic Mouseのfamily IDとbuilt-in属性を判定
-- 内蔵トラックパッドを入力元判別専用で監視
-- デバイス参照のretain／release
-- スリープ復帰、Bluetooth再接続、IOKit着脱通知
+- Enumerates devices from MultitouchSupport
+- Determines a Magic Mouse's family ID and built-in attribute
+- Monitors the built-in trackpad solely to distinguish input sources
+- Retains/releases device references
+- Handles sleep/wake, Bluetooth reconnection, and IOKit attach/detach notifications
 
 ### `TouchGestureManager.swift` / `TapRecognizer.swift`
 
-- タッチフレームを追跡
-- 1本指・2本指・3本指ジェスチャーを判定
-- スクロール、物理クリック、慣性中の誤タップを抑制
-- 設定値は`SettingsSnapshot`から読み、MTコールバック内でUserDefaultsを読まない
+- Tracks touch frames
+- Determines one-, two-, and three-finger gestures
+- Suppresses false taps during scrolling, physical clicks, and inertia
+- Reads settings from `SettingsSnapshot`; does not read UserDefaults inside MT callbacks
 
 ### `EventInterceptor.swift`
 
-1本のCGEventTapで次を処理します。
+Handles the following through a single CGEventTap:
 
-- 物理クリック監視
-- 2本指物理クリックからミドルクリックへの変換
-- スクロール状態の監視
-- 仮想トラックパッドモード中のスクロール所有元分離
-- ネイティブ慣性スクロールの通過
+- Monitoring physical clicks
+- Converting a two-finger physical click into a middle click
+- Monitoring scroll state
+- Separating scroll ownership while in virtual trackpad mode
+- Passing through native inertial scrolling
 
-CGEventTapコールバック内では、アロケーション、ファイルログ、UserDefaults読み取りを
-行わないことが安全要件です。
+Inside the CGEventTap callback, it is a safety requirement not to allocate,
+write to file logs, or read UserDefaults.
 
 ### `TrackpadModeController.swift`
 
-- Magic Mouse表面の相対移動をカーソル移動へ変換
-- 120 Hzの専用キューでイベントを生成
-- 2本指スクロール中はカーソル追跡を停止
-- 3本指ダブルタップによるモード切り替え
+- Converts relative movement on the Magic Mouse surface into cursor movement
+- Generates events on a dedicated 120 Hz queue
+- Stops cursor tracking during two-finger scrolling
+- Switches modes via a three-finger double tap
 
 ### `MacroRecorder.swift` / `ActionExecutor.swift`
 
-- listen-only CGEventTapでキーイベントを録画
-- 200イベントまたは60秒で自動停止
-- 端末内のUserDefaultsへ保存
-- 専用シリアルキューで再生
-- 再トリガー時は世代番号で以前の再生を中断
+- Records key events with a listen-only CGEventTap
+- Automatically stops after 200 events or 60 seconds
+- Saves to on-device UserDefaults
+- Plays back on a dedicated serial queue
+- Interrupts a previous playback via a generation number when retriggered
 
-公開版では任意シェルコマンド、任意アプリ起動、汎用キーストロークの未使用経路を
-削除し、マクロとトラックパッド切り替えだけを公開しています。
+The public release removes the unused code paths for arbitrary shell
+commands, launching arbitrary apps, and generic keystrokes, exposing only
+macros and trackpad-mode switching.
 
 ### `PermissionMonitor.swift`
 
-`AXIsProcessTrusted()`のTCCキャッシュだけに依存せず、テスト用CGEventTapを作成できるかで
-権限状態を監視します。権限喪失時はEventInterceptorを完全に破棄します。
+Rather than relying solely on the TCC cache of `AXIsProcessTrusted()`, this
+monitors permission state by checking whether a test CGEventTap can be
+created. When permission is lost, it fully tears down EventInterceptor.
 
-ユーザー向けの安全要件は[SAFETY.md](./SAFETY.md)を参照してください。
+See [SAFETY.md](./SAFETY.md) for user-facing safety requirements.
 
 ### `PointerSpeedManager.swift`
 
-IOHIDEventSystemClient SPIでシステムの`HIDMouseAcceleration`を変更します。
-元値をUserDefaultsに保持し、通常終了時に復元します。
+Changes the system's `HIDMouseAcceleration` via the IOHIDEventSystemClient
+SPI. It keeps the original value in UserDefaults and restores it on normal
+termination.
 
 ### `Logger.swift`
 
-unified logと`~/Library/Logs/MagicMouseToolkit.log`へ診断情報を書きます。
-ファイルログは約1 MiBで`MagicMouseToolkit.log.old`へローテーションします。
+Writes diagnostic information to the unified log and to
+`~/Library/Logs/MagicMouseToolkit.log`. The file log rotates to
+`MagicMouseToolkit.log.old` at roughly 1 MiB.
 
 ## Build and signing
 
-`build.sh`はarm64とx86_64を個別にコンパイルし、`lipo`でUniversal Binaryへ統合します。
+`build.sh` compiles arm64 and x86_64 separately and combines them into a
+Universal Binary with `lipo`.
 
-- `SIGN_ID`未指定: ad-hoc署名
-- `SIGN_ID`指定かつKeychainに存在: 指定identityで署名
+- `SIGN_ID` unspecified: ad-hoc signing
+- `SIGN_ID` specified and present in Keychain: signs with the specified identity
 
-公開バイナリを配布する場合は、Developer ID Application署名とApple notarizationを
-別途行う必要があります。秘密鍵や証明書はリポジトリへ含めません。
+To distribute a public binary, Developer ID Application signing and Apple
+notarization must be performed separately. Private keys and certificates are
+not included in the repository.
 
 ## Private API boundary
 
-次の非公開APIへ依存します。
+This project depends on the following private APIs:
 
 - `/System/Library/PrivateFrameworks/MultitouchSupport.framework`
 - `MTDevice*`
@@ -126,4 +137,5 @@ unified logと`~/Library/Logs/MagicMouseToolkit.log`へ診断情報を書きま�
 - `IOHIDEventSystemClient*`
 - `HIDMouseAcceleration`
 
-このためMac App Store向けではなく、将来のmacOSで互換性が失われる可能性があります。
+As a result, it is not suitable for the Mac App Store and may lose
+compatibility with future versions of macOS.

@@ -1,6 +1,6 @@
 # prototypes
 
-役目を終えた検証用コード。ビルド対象外。
+Validation code that has served its purpose. Excluded from the build.
 
-- `glass_window_test/` — ウィンドウの背景ブラー表現の検証。本体には取り込み済み。
-- `virtual_trackpad/` — 仮想トラックパッド化の検証。本体には取り込み済み。
+- `glass_window_test/` — Validation of the window's background-blur rendering. Already incorporated into the main app.
+- `virtual_trackpad/` — Validation of the virtual-trackpad conversion. Already incorporated into the main app.

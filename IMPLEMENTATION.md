@@ -1,69 +1,69 @@
-# Magic Mouse Toolkit 実装仕様書（コード直結版）
+# Magic Mouse Toolkit Implementation Spec (Code-Aligned Edition)
 
-作成日: 2026-07-02。この文書だけを見て実装を完了できることを目標とする（実装担当: Sonnet 5 想定）。
-背景・経緯は SPEC.md / ARCHITECTURE.md、デザイントークンは DESIGN.md を参照。
+Created: 2026-07-02. The goal is that implementation can be completed by reading only this document (implementer assumed to be Sonnet 5).
+For background and history, see SPEC.md / ARCHITECTURE.md; for design tokens, see DESIGN.md.
 
-## 0. フェーズ
+## 0. Phases
 
-- **フェーズ1（プロトタイプ、本書のスコープ）**: 全機能 + 簡易UI（DESIGN.md のトークンを使ったネイティブ風 Form）。動作検証・キャリブレーションまで
-- **フェーズ2**: Liquid Glass デザインへの再スキン（DesignSystem.swift のトークン値差し替えと GlassWindow 導入のみで済む構造にしておく）
+- **Phase 1 (prototype, scope of this document)**: All features + a simple UI (a native-looking Form using DESIGN.md's tokens). Through functional verification and calibration
+- **Phase 2**: Reskin to the Liquid Glass design (structured so this only requires swapping token values in DesignSystem.swift and introducing GlassWindow)
 
-## 1. タップ/スクロール誤反応対策 — 4層防衛（本仕様の核心）
+## 1. Countermeasures against false tap/scroll triggers — 4-layer defense (the core of this spec)
 
-タッチ座標のみからの推定（距離・速度閾値）には原理的に境界誤判定が残る。そこで **OS自身のスクロール判定（`.scrollWheel` イベント）を正解信号として利用する**。CGEventTap はミドルクリック変換用に必ず張るため、監視対象に `.scrollWheel` を加えるだけで追加コストはほぼゼロ。
+Estimation from touch coordinates alone (distance/velocity thresholds) inherently leaves boundary misjudgments. So we **use the OS's own scroll determination (the `.scrollWheel` event) as the ground-truth signal**. Since a CGEventTap is always attached for middle-click conversion anyway, adding `.scrollWheel` to the set of monitored events costs almost nothing extra.
 
-タップ成立には以下 **全層の通過** が必要:
+A tap is only recognized if it passes **every one of the following layers**:
 
-### 第1層: 接触ジオメトリ（タッチ座標ベース、従来方式）
-- 接触時間 ≤ `tapMaxDuration`
-- 直線距離（開始点→終了点） ≤ `tapMaxStraightDistance`
-- 累積経路長（毎フレームの移動量合計） ≤ `tapMaxPathLength`
-- 観測最大瞬間速度（`MTTouch.normalized.velocity` のノルム最大値） ≤ `tapMaxVelocity`
-- 接触フレーム数 ≥ `tapMinFrames`（一瞬の掠り・ノイズフレーム除外。Magic Mouse のタッチフレームは約90Hz なので 3フレーム ≈ 33ms 以上の接触を要求）
+### Layer 1: Contact geometry (touch-coordinate based, the conventional approach)
+- Contact duration ≤ `tapMaxDuration`
+- Straight-line distance (start point → end point) ≤ `tapMaxStraightDistance`
+- Cumulative path length (sum of per-frame movement) ≤ `tapMaxPathLength`
+- Observed peak instantaneous speed (max norm of `MTTouch.normalized.velocity`) ≤ `tapMaxVelocity`
+- Contact frame count ≥ `tapMinFrames` (excludes momentary grazes/noise frames. Since Magic Mouse touch frames run at roughly 90Hz, this requires contact of 3 frames ≈ 33ms or more)
 
-### 第2層: スクロールベト（OS のスクロール判定を利用）
-- タッチ開始〜タップ判定時点の間、および判定時点から遡って `scrollVetoWindow`（既定 0.25s）以内に `.scrollWheel` イベントが観測されていたら **不成立**
-- scrollWheel の記録は受動的（イベントは無変更で素通し）。`ScrollMonitor` が最終観測時刻のみ保持
+### Layer 2: Scroll veto (uses the OS's scroll determination)
+- If a `.scrollWheel` event was observed between touch-start and the moment of tap judgment, or within `scrollVetoWindow` (default 0.25s) looking back from the judgment moment, the tap **does not register**
+- Recording of scrollWheel is passive (events pass through unmodified). `ScrollMonitor` only retains the last-observed timestamp
 
-### 第3層: 慣性スクロールベト
-- `.scrollWheel` の `kCGScrollWheelEventMomentumPhase` が began/continued の間（= 慣性スクロール中）に開始されたタッチは、**その接触全体をタップ候補から除外**する（フラグ `beganDuringMomentum` を立て、リリース時に必ず不成立）
-- 理由: Magic Mouse では「慣性スクロールを指で止める」操作が日常的に発生し、これが誤クリックの最頻パターンになるため
+### Layer 3: Momentum-scroll veto
+- A touch that began while `.scrollWheel`'s `kCGScrollWheelEventMomentumPhase` was began/continued (i.e., during momentum scrolling) has **its entire contact excluded from tap candidacy** (the `beganDuringMomentum` flag is set, guaranteeing non-registration on release)
+- Reason: on Magic Mouse, "stopping momentum scroll with a finger" happens routinely in daily use, and this is the single most common pattern behind false clicks
 
-### 第4層: 物理ボタンベト
-- 物理ボタン押下中（leftMouseDown〜Up の間）、および buttonUp から `buttonVetoWindow`(既定 0.1s) 以内はタップ不成立
-- 理由: 物理クリック時にも指はタッチとして検出されるため、「物理クリック + タップ合成」の二重クリックを防ぐ
+### Layer 4: Physical-button veto
+- While a physical button is held down (between leftMouseDown and Up), and within `buttonVetoWindow` (default 0.1s) after buttonUp, taps do not register
+- Reason: a finger is also detected as a touch during a physical click, so this prevents a double click formed from "physical click + synthesized tap"
 
-### 既知の限界（README に明記する）
-- トラックパッド等他デバイスのスクロール中に Magic Mouse をタップすると第2層が誤ベトする（クリックが1回無視される）。両手同時操作の稀なケースであり安全側の誤りなので許容
-- 第2層はスクロールイベント発生が前提のため、スクロール開始直前の極小移動には第1層で対応する（役割分担）
+### Known limitations (to be documented in the README)
+- If you tap the Magic Mouse while another device such as a trackpad is scrolling, Layer 2 will falsely veto (one click gets ignored). This is a rare two-handed-operation case and the error is fail-safe, so it's accepted
+- Since Layer 2 depends on a scroll event actually occurring, the very small movements right before a scroll starts are handled by Layer 1 instead (division of responsibility)
 
-## 2. プロジェクト構成
+## 2. Project structure
 
 ```
 MagicMouseToolkit/
 ├── build.sh
 ├── Info.plist
-├── MagicMouseToolkit.entitlements    （使わない。ad-hoc配布・App Sandbox無し）
+├── MagicMouseToolkit.entitlements    (unused. Ad-hoc distribution, no App Sandbox)
 ├── Sources/
 │   ├── main.swift
 │   ├── AppDelegate.swift
-│   ├── MultitouchBridge.h       （HIDシステムSPI宣言も統合、単一ブリッジヘッダー制約のため）
+│   ├── MultitouchBridge.h       (also consolidates the HID system SPI declarations, due to the single-bridging-header constraint)
 │   ├── MultitouchDevice.swift
 │   ├── TouchGestureManager.swift
 │   ├── TapRecognizer.swift
 │   ├── EventInterceptor.swift
 │   ├── SynthesizedClick.swift
-│   ├── ActionKind.swift         （タップ割り当てのCodableモデル。RecordedKeyEvent含む）
-│   ├── ActionExecutor.swift     （ActionKind実行。マクロ再生の再入防止ロジック含む）
-│   ├── MacroRecorder.swift      （3本指タップのマクロ録画、CGEventTap listen-only）
-│   ├── PointerSpeedManager.swift（トラッキング速度ブースト、IOHIDEventSystemClient SPI）
+│   ├── ActionKind.swift         (Codable model for tap assignments; includes RecordedKeyEvent)
+│   ├── ActionExecutor.swift     (executes ActionKind; includes reentrancy guard logic for macro playback)
+│   ├── MacroRecorder.swift      (three-finger-tap macro recording, listen-only CGEventTap)
+│   ├── PointerSpeedManager.swift(tracking-speed boost, IOHIDEventSystemClient SPI)
 │   ├── Settings.swift
-│   ├── DesignSystem.swift       （DESIGN.md のトークン実装）
+│   ├── DesignSystem.swift       (implementation of DESIGN.md's tokens)
 │   └── SettingsView.swift
-└── docs（SPEC.md ほか既存）
+└── docs (SPEC.md and other existing docs)
 ```
 
-## 3. ビルド・署名
+## 3. Build and signing
 
 ### build.sh
 ```bash
@@ -72,7 +72,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 APP="Magic Mouse Toolkit.app"
 BIN="MagicMouseToolkit"
-SIGN_ID="${SIGN_ID:-}"              # 未指定ならad-hoc署名
+SIGN_ID="${SIGN_ID:-}"              # ad-hoc signing if unspecified
 
 SWIFT_FILES=(Sources/*.swift)
 FLAGS=(-import-objc-header Sources/MultitouchBridge.h
@@ -80,7 +80,7 @@ FLAGS=(-import-objc-header Sources/MultitouchBridge.h
        -framework AppKit -framework SwiftUI -framework QuartzCore -framework IOKit -O)
 
 mkdir -p build
-# フェーズ2のLiquid Glass(glassEffect)はmacOS 26+のAPIのためターゲットを引き上げ
+# Phase 2's Liquid Glass (glassEffect) is a macOS 26+ API, so the deployment target is raised
 swiftc "${SWIFT_FILES[@]}" "${FLAGS[@]}" -target arm64-apple-macos26.0  -o build/$BIN-arm64
 swiftc "${SWIFT_FILES[@]}" "${FLAGS[@]}" -target x86_64-apple-macos26.0 -o build/$BIN-x86_64
 lipo -create build/$BIN-arm64 build/$BIN-x86_64 -output build/$BIN
@@ -92,11 +92,11 @@ cp build/$BIN "build/$APP/Contents/MacOS/"
 codesign --force --sign "$SIGN_ID" "build/$APP"
 echo "Built: build/$APP"
 ```
-- 環境変数 `CLANG_MODULE_CACHE_PATH="$PWD/.build/module-cache"` を build.sh 冒頭で export する（CLAUDE.md 既定）
-- 動作確認は必ず `open -a "build/Magic Mouse Toolkit.app"`（launchd 親）で行う。ターミナル直接実行では TCC が効かない
+- Export the environment variable `CLANG_MODULE_CACHE_PATH="$PWD/.build/module-cache"` at the top of build.sh (per CLAUDE.md defaults)
+- Always verify behavior via `open -a "build/Magic Mouse Toolkit.app"` (the launchd parent). Running the binary directly from the terminal bypasses TCC
 
-### Info.plist（必須キー）
-| キー | 値 |
+### Info.plist (required keys)
+| Key | Value |
 |---|---|
 | CFBundleIdentifier | com.mori0818.magicmousetoolkit |
 | CFBundleName / CFBundleDisplayName | Magic Mouse Toolkit |
@@ -105,7 +105,7 @@ echo "Built: build/$APP"
 | LSUIElement | true |
 | NSHighResolutionCapable | true |
 
-## 4. MultitouchBridge.h（全文）
+## 4. MultitouchBridge.h (full contents)
 
 ```c
 #ifndef MultitouchBridge_h
@@ -121,7 +121,7 @@ typedef struct {
   int32_t identifier;
   int32_t state;          // 4 = Touching
   int32_t fingerId, handId;
-  MTVector normalized;    // position/velocity とも 0.0-1.0 正規化（Yは前方が大）
+  MTVector normalized;    // both position/velocity normalized 0.0-1.0 (larger Y = further forward)
   float size;
   int32_t zero1;
   float angle, majorAxis, minorAxis;
@@ -144,32 +144,32 @@ OSStatus MTDeviceGetFamilyID(MTDeviceRef, int32_t *familyId);
 
 #endif
 ```
-- タッチ state 定数: `4 (Touching)` のみ「接触中」として扱う。それ以外の state のタッチはフレーム内の指数カウントに含めない
-- `MTTouch` レイアウトは MouseToucher フォークで実機検証済みのものと同一。もし position が異常値（0-1 範囲外）を返す場合はレイアウトずれを疑い、まず `timestamp` と `identifier` の妥当性をログで確認する
+- Touch state constant: only `4 (Touching)` is treated as "in contact." Touches in any other state are not counted toward the per-frame finger count
+- The `MTTouch` layout is identical to the one verified on real hardware in the MouseToucher fork. If `position` returns anomalous values (outside the 0-1 range), suspect a layout mismatch and first check the validity of `timestamp` and `identifier` in the logs
 
-## 5. デバイス管理 — MultitouchDevice.swift
+## 5. Device management — MultitouchDevice.swift
 
 ```swift
 final class MultitouchDeviceManager {
     static let shared = MultitouchDeviceManager()
     private var activeDevices: [MTDeviceRef] = []
-    func start()    // 列挙→フィルタ→登録
-    func stop()     // 全 unregister + MTDeviceStop
-    func restart()  // stop() → 0.5s 後 start()（デバイス再接続対応）
+    func start()    // enumerate → filter → register
+    func stop()     // unregister all + MTDeviceStop
+    func restart()  // stop() → start() after 0.5s (handles device reconnection)
 }
 ```
 
-- **フィルタ条件（Magic Mouse 限定）**: `MTDeviceIsBuiltIn(dev) == false` かつ `MTDeviceGetFamilyID` が成功し `familyId == 112 || familyId == 113`
-  - 112/113 = Magic Mouse 系ファミリー。**初回起動時にログへ実際の familyId を必ず出力すること**（Magic Mouse 2 / USB-C 版で値が異なる場合に即座に発見できるように）。フィルタ結果ゼロ台数の場合は「familyId フィルタを通過したデバイスなし。検出された familyId: [...]」と メニューバーの状態表示に出す
-  - フォールバック設定 `deviceFilterStrict`（既定 true）。false にすると従来どおり `!MTDeviceIsBuiltIn` のみ（familyId が想定と違う個体への逃げ道）
-- コールバックは C 関数ポインタのため capture 不可。グローバル関数 → `TouchGestureManager.shared` へ転送する
-- **再接続対応**: `NSWorkspace.shared.notificationCenter` の `didWakeNotification` と、`IOServiceAddMatchingNotification`（AppleMultitouchDevice のマッチング）… は複雑なので **プロトタイプでは簡略化**: didWake 通知 + 「メニューバーの『デバイスを再検出』項目」で `restart()` を呼べるようにする。自動 BT 再接続検知はフェーズ2
+- **Filter condition (Magic Mouse only)**: `MTDeviceIsBuiltIn(dev) == false` and `MTDeviceGetFamilyID` succeeds with `familyId == 112 || familyId == 113`
+  - 112/113 = the Magic Mouse family. **On first launch, always log the actual familyId** (so that a mismatch on Magic Mouse 2 / USB-C models can be spotted immediately). If the filter yields zero devices, surface "No device passed the familyId filter. Detected familyIds: [...]" in the menu bar status display
+  - Fallback setting `deviceFilterStrict` (default true). Setting it to false falls back to the old behavior of using only `!MTDeviceIsBuiltIn` (an escape hatch for units whose familyId doesn't match expectations)
+- Callbacks are C function pointers and cannot capture context; forward from a global function to `TouchGestureManager.shared`
+- **Reconnection handling**: `NSWorkspace.shared.notificationCenter`'s `didWakeNotification` combined with `IOServiceAddMatchingNotification` (matching on AppleMultitouchDevice) would be complex, so **the prototype simplifies this**: subscribe to didWake notifications, and provide a "Redetect Device" menu-bar item that calls `restart()`. Automatic BT-reconnection detection is deferred to Phase 2
 
-## 6. 設定 — Settings.swift
+## 6. Settings — Settings.swift
 
-`UserDefaults.standard` バック。全プロパティは `didSet` で `NotificationCenter.default.post(name: .settingsChanged)` を発行。読み手（TouchGestureManager / EventInterceptor）は通知受信時に全値をローカル構造体 `SettingsSnapshot` へコピーして保持する（コールバック内で UserDefaults を読まない — 速度と安全のため）。
+Backed by `UserDefaults.standard`. Every property posts `NotificationCenter.default.post(name: .settingsChanged)` from its `didSet`. Readers (TouchGestureManager / EventInterceptor) copy all values into a local `SettingsSnapshot` struct upon receiving the notification, and hold onto that (UserDefaults is never read inside a callback — for speed and safety).
 
-| プロパティ | UserDefaults キー | 型 | 既定値 | UI範囲 |
+| Property | UserDefaults key | Type | Default | UI range |
 |---|---|---|---|---|
 | enabled | mmt.enabled | Bool | true | — |
 | oneFingerTapEnabled | mmt.tap1.enabled | Bool | true | — |
@@ -188,68 +188,68 @@ final class MultitouchDeviceManager {
 | twoFingerSyncWindow | mmt.tap2.syncWindow | Double | 0.06 | 0.02–0.2 s |
 | deviceFilterStrict | mmt.device.strict | Bool | true | — |
 
-- `tapMaxVelocity` の既定 1.5 は暫定値。デバッグ表示でのキャリブレーション対象（§9）
-- 初期値登録は `UserDefaults.standard.register(defaults:)` で起動時に行う
+- The default of 1.5 for `tapMaxVelocity` is provisional. It's the target for calibration via the debug display (§9)
+- Register initial values at launch via `UserDefaults.standard.register(defaults:)`
 
-## 7. タップ判定 — TouchGestureManager.swift + TapRecognizer.swift
+## 7. Tap recognition — TouchGestureManager.swift + TapRecognizer.swift
 
-### 共有状態（EventInterceptor から読まれる）
+### Shared state (read by EventInterceptor)
 ```swift
-struct TouchSharedState {          // os_unfair_lock で保護
-    var fingerCount: Int = 0       // 現フレームの state==4 の指数
-    var lastFrameAt: CFTimeInterval = 0   // 最後にタッチフレームを受信した時刻（CACurrentMediaTime）
+struct TouchSharedState {          // protected by os_unfair_lock
+    var fingerCount: Int = 0       // number of fingers in state==4 for the current frame
+    var lastFrameAt: CFTimeInterval = 0   // time the last touch frame was received (CACurrentMediaTime)
 }
 ```
 
-### タッチフレーム処理（MTコールバック、バックグラウンドスレッド）
-1. `SettingsSnapshot` 参照。`enabled == false` なら fingerCount 更新のみして return
-2. 共有状態を更新（fingerCount, lastFrameAt）
-3. 各タッチを `identifier` キーで `activeTouches: [Int32: TouchTrack]` に対応付けて更新
+### Touch frame processing (MT callback, background thread)
+1. Reference `SettingsSnapshot`. If `enabled == false`, only update fingerCount and return
+2. Update shared state (fingerCount, lastFrameAt)
+3. Map each touch by its `identifier` key into `activeTouches: [Int32: TouchTrack]` and update
 
 ```swift
 struct TouchTrack {
     let id: Int32
-    let startTime: Double          // MTフレームの timestamp
+    let startTime: Double          // timestamp of the MT frame
     let startPos: MTPoint
     var lastPos: MTPoint
     var pathLength: Float = 0      // Σ|Δpos|
     var maxVelocity: Float = 0     // max ‖normalized.velocity‖
     var frames: Int = 1
-    var beganDuringMomentum: Bool  // 開始時に ScrollMonitor.momentumActive だったか（第3層）
-    var vetoed: Bool = false       // 途中で第1層の閾値超過が確定したら true（以降更新不要）
+    var beganDuringMomentum: Bool  // whether ScrollMonitor.momentumActive was true at start (Layer 3)
+    var vetoed: Bool = false       // set true once a Layer-1 threshold violation is confirmed mid-contact (no further updates needed)
 }
 ```
 
-4. フレーム内に居るタッチ: track 更新。`pathLength += hypot(Δx, Δy)`、`maxVelocity = max(...)`。閾値超過したら `vetoed = true`
-5. **前フレームに居て今フレームに居ない identifier = リリース**。リリース時に判定（§次項）
-6. 3本以上の指が同時に観測されたフレームがあったら、その時点の全 track を `vetoed = true`
+4. For touches present in the frame: update the track. `pathLength += hypot(Δx, Δy)`, `maxVelocity = max(...)`. If a threshold is exceeded, set `vetoed = true`
+5. **An identifier present in the previous frame but absent in the current frame = a release**. Judgment happens on release (see next section)
+6. If any frame is observed with 3 or more simultaneous fingers, set `vetoed = true` on every track at that point
 
-### リリース時のタップ判定（TapRecognizer）
+### Tap judgment on release (TapRecognizer)
 ```
-成立条件（全て AND）:
+Registration condition (all AND):
   !track.vetoed
-  !track.beganDuringMomentum                          // 第3層
+  !track.beganDuringMomentum                          // Layer 3
   duration = releaseTime - startTime ≤ tapMaxDuration
   |endPos - startPos| ≤ tapMaxStraightDistance
   pathLength ≤ tapMaxPathLength
   maxVelocity ≤ tapMaxVelocity
   frames ≥ tapMinFrames
-  startPos がゾーン [zoneMinX,zoneMaxX]×[zoneMinY,zoneMaxY] 内
-  ScrollMonitor.lastScrollAt < startTime - scrollVetoWindow   // 第2層（開始前）
-  ScrollMonitor.lastScrollAt < now → 接触中にスクロール無し     // 第2層（接触中）
-  EventInterceptor.buttonDown == false                 // 第4層
+  startPos is within the zone [zoneMinX,zoneMaxX]×[zoneMinY,zoneMaxY]
+  ScrollMonitor.lastScrollAt < startTime - scrollVetoWindow   // Layer 2 (before start)
+  ScrollMonitor.lastScrollAt < now → no scroll occurred during contact   // Layer 2 (during contact)
+  EventInterceptor.buttonDown == false                 // Layer 4
   now - EventInterceptor.lastButtonUpAt > buttonVetoWindow
 ```
-（第2層は「`lastScrollAt` が `startTime - scrollVetoWindow` 以降に一度でも更新されていたら不成立」と単純化して実装してよい）
+(Layer 2 may be implemented with the simplification: "does not register if `lastScrollAt` was ever updated on or after `startTime - scrollVetoWindow`")
 
-- **1本指タップ**: 成立時、`endPos.x > rightZoneMinX` なら右クリック、それ以外は左クリックを合成
-- **2本指タップ**: 2つの track が (a) 開始時刻差 ≤ `twoFingerSyncWindow`、(b) 両方リリース済みで両方成立条件を満たす、(c) リリース時刻差 ≤ `twoFingerSyncWindow * 2` のとき左クリック1回を合成。**2本指タップが成立したら、同じ2つの track で1本指タップを発火させない**（2本目のリリースまで最大 `twoFingerSyncWindow*2` だけ1本指判定を保留する。実装: リリース済み track を即発火せず `pendingRelease` に積み、(i) 相方が出現→2本指発火、(ii) タイムアウト→1本指発火、のディレイ判定。タイマーは `DispatchSourceTimer` 1本を使い回す）
-  - 注: この保留は 2本指タップ有効時のみ。`twoFingerTapEnabled == false` なら1本指を即発火（遅延ゼロ）
-- クリック合成は `SynthesizedClick.post(button:at:)`（§8）。発火位置は**現在のカーソル位置**（`CGEvent(source: nil)` の location）
+- **One-finger tap**: on registration, synthesize a right click if `endPos.x > rightZoneMinX`, otherwise a left click
+- **Two-finger tap**: synthesize a single left click when two tracks satisfy (a) start-time difference ≤ `twoFingerSyncWindow`, (b) both have been released and both meet the registration condition, and (c) release-time difference ≤ `twoFingerSyncWindow * 2`. **Once a two-finger tap registers, do not fire a one-finger tap for the same two tracks** (hold off one-finger judgment for up to `twoFingerSyncWindow*2` until the second release. Implementation: don't fire a released track immediately — queue it in `pendingRelease`, and use delayed judgment where (i) its partner appears → fire the two-finger tap, or (ii) it times out → fire the one-finger tap. Reuse a single `DispatchSourceTimer` for this)
+  - Note: this hold-off applies only when two-finger tap is enabled. If `twoFingerTapEnabled == false`, fire the one-finger tap immediately (zero delay)
+- Click synthesis is done via `SynthesizedClick.post(button:at:)` (§8). The firing position is the **current cursor position** (the location from `CGEvent(source: nil)`)
 
-## 8. イベントタップ — EventInterceptor.swift + SynthesizedClick.swift
+## 8. Event tap — EventInterceptor.swift + SynthesizedClick.swift
 
-### 1本の CGEventTap で3役
+### One CGEventTap serving three roles
 ```swift
 CGEvent.tapCreate(
   tap: .cghidEventTap, place: .headInsertEventTap, options: .defaultTap,
@@ -258,23 +258,23 @@ CGEvent.tapCreate(
                   | (1 << CGEventType.scrollWheel.rawValue),
   callback: interceptorCallback, userInfo: nil)
 ```
-コールバック規律: **アロケーション・ログ・UserDefaults 読み取り禁止**。SettingsSnapshot と共有状態の読み取り + 整数フィールド書き換えのみ。
+Callback discipline: **no allocation, no logging, no reading UserDefaults**. Only reading SettingsSnapshot and shared state, plus rewriting integer fields, is allowed.
 
-処理分岐（擬似コード）:
+Branching logic (pseudocode):
 ```
 case .tapDisabledByTimeout, .tapDisabledByUserInput:
-    CGEventTapEnable(tap, true); return event            // 自己復旧
-case .scrollWheel:                                        // ScrollMonitor 役
+    CGEventTapEnable(tap, true); return event            // self-recovery
+case .scrollWheel:                                        // acts as ScrollMonitor
     lastScrollAt = now
     phase = event[.scrollWheelEventMomentumPhase]
     momentumActive = (phase == 1 || phase == 2)           // began/continued
-    return event                                          // 無変更で素通し
+    return event                                          // pass through unmodified
 case .leftMouseDown:
-    if event[.eventSourceUserData] == kMCEventSignature: return event   // 自己合成は素通し
+    if event[.eventSourceUserData] == kMCEventSignature: return event   // pass through our own synthesized events
     buttonDown = true
     if middleClickEnabled
        && shared.fingerCount == 2
-       && (now - shared.lastFrameAt) < 0.08 {             // デバイス相関ガード
+       && (now - shared.lastFrameAt) < 0.08 {             // device-correlation guard
         convertingToMiddle = true
         event.type = .otherMouseDown
         event[.mouseEventButtonNumber] = 2                // center
@@ -283,15 +283,15 @@ case .leftMouseDown:
 case .leftMouseUp:
     if event[.eventSourceUserData] == kMCEventSignature: return event
     buttonDown = false; lastButtonUpAt = now
-    if convertingToMiddle {                               // down で決めたら up も必ず変換
+    if convertingToMiddle {                               // if down decided the conversion, up must convert too
         convertingToMiddle = false
         event.type = .otherMouseUp
         event[.mouseEventButtonNumber] = 2
     }
     return event
 ```
-- `enabled == false` または `middleClickEnabled == false` のとき: scrollWheel の記録は継続する必要がない（タップも無効/ベト先も無効）ため、**master enable OFF 時は `CGEventTapEnable(false)`**。middleClick のみ OFF でタップ有効の場合は tap は生かす（第2層のため）が Down/Up は素通し
-- tap 作成失敗（権限なし）→ AppDelegate の権限フローへ（§10）
+- When `enabled == false` or `middleClickEnabled == false`: since there's no need to keep recording scrollWheel (taps are disabled, or the veto target is disabled), **disable the tap entirely (`CGEventTapEnable(false)`) when master enable is OFF**. When only middleClick is OFF but tapping is enabled, keep the tap alive (needed for Layer 2), but pass Down/Up through unmodified
+- If tap creation fails (no permission) → route to AppDelegate's permission flow (§10)
 
 ### SynthesizedClick.swift
 ```swift
@@ -300,97 +300,97 @@ enum SynthesizedClick {
     static func post(button: CGMouseButton) {
         let loc = CGEvent(source: nil)!.location
         let src = CGEventSource(stateID: .hidSystemState)
-        src?.userData = signature                       // 自己識別（EventInterceptor が素通しする）
-        let (down, up): (CGEventType, CGEventType) = ...  // button に応じて left/right/other
+        src?.userData = signature                       // self-identification (EventInterceptor passes it through)
+        let (down, up): (CGEventType, CGEventType) = ...  // left/right/other depending on button
         CGEvent(mouseEventSource: src, mouseType: down, mouseCursorPosition: loc, mouseButton: button)?.post(tap: .cghidEventTap)
         CGEvent(mouseEventSource: src, mouseType: up,   mouseCursorPosition: loc, mouseButton: button)?.post(tap: .cghidEventTap)
     }
 }
 ```
-- down と up の間に遅延は入れない（MouseToucher 検証で問題なし）
-- 注意: `CGEventSource.userData` はイベント側では `.eventSourceUserData` フィールドで読める
+- No delay is inserted between down and up (verified fine in MouseToucher testing)
+- Note: `CGEventSource.userData` is readable on the event side via the `.eventSourceUserData` field
 
-## 9. UI — SettingsView.swift（プロトタイプ版）
+## 9. UI — SettingsView.swift (prototype version)
 
-DESIGN.md のトークン（`DesignSystem.swift`）のみを使って構築する。直値のフォントサイズ・色・余白をビューに書かない。
+Build using only DESIGN.md's tokens (`DesignSystem.swift`). Do not write literal font sizes, colors, or spacing directly into views.
 
-構成（`Form` + `Section`、ウィンドウ 440×620、リサイズ不可）:
-1. **一般**: 有効トグル（master）
-2. **ジェスチャー**: 1本指タップ / 2本指タップ / ミドルクリック の各トグル + 右クリックゾーン開始X スライダー
-3. **反応範囲**: X min/max、Y min/max の4スライダー（%表示）
-4. **感度**: tapMaxDuration / MaxStraight / MaxPath / MaxVelocity / MinFrames の5スライダー（現在値を右端に等幅フォント表示）
-5. **誤反応対策**: scrollVetoWindow / buttonVetoWindow / twoFingerSyncWindow
-6. **デバッグ**（DisclosureGroup、開いている間のみ更新）:
-   - 現在の指数・最新タッチ座標 (x, y)
-   - **直近のタップ試行の判定内訳**: 各条件の実測値と閾値を並べ、どの層/条件で落ちたかを色分け表示（例: `path 0.11 > 0.07 ✗`）。これが速度閾値キャリブレーションの主手段
-   - 直近のイベント: 「タップ成立(左)」「スクロールベト」「慣性ベト」等の履歴 最新10件
-   - デバッグデータの受け渡し: TouchGestureManager が `DebugFeed.shared`（ObservableObject、リングバッファ10件）へ **DisclosureGroup が開いているときだけ** push する（`DebugFeed.isActive` フラグをビューの onAppear/onDisappear で切替。閉じている間のオーバーヘッドはフラグ分岐1つ）
-7. **リセット**: 「感度を既定値に戻す」ボタン
+Structure (`Form` + `Section`, window 440×620, not resizable):
+1. **General**: master enable toggle
+2. **Gestures**: toggles for one-finger tap / two-finger tap / middle click + a slider for the right-click zone's starting X
+3. **Active range**: 4 sliders for X min/max and Y min/max (shown as %)
+4. **Sensitivity**: 5 sliders for tapMaxDuration / MaxStraight / MaxPath / MaxVelocity / MinFrames (current value shown right-aligned in a monospaced font)
+5. **False-trigger countermeasures**: scrollVetoWindow / buttonVetoWindow / twoFingerSyncWindow
+6. **Debug** (DisclosureGroup, updates only while open):
+   - Current finger count and latest touch coordinates (x, y)
+   - **Breakdown of the judgment for the most recent tap attempt**: side-by-side measured values and thresholds for each condition, color-coded to show which layer/condition it failed at (e.g., `path 0.11 > 0.07 ✗`). This is the primary tool for calibrating the velocity threshold
+   - Recent events: the last 10 entries of history such as "Tap registered (left)," "Scroll veto," "Momentum veto," etc.
+   - Debug data handoff: TouchGestureManager pushes to `DebugFeed.shared` (an ObservableObject, a 10-entry ring buffer) **only while the DisclosureGroup is open** (toggle the `DebugFeed.isActive` flag in the view's onAppear/onDisappear. Overhead while closed is a single flag check)
+7. **Reset**: a "Restore sensitivity to defaults" button
 
-メニューバー（NSMenu、AppKit）:
+Menu bar (NSMenu, AppKit):
 ```
-✓ 有効                     （toggle, master enable）
+✓ Enabled                  (toggle, master enable)
 ──────────
-設定を開く…
-デバイスを再検出            （MultitouchDeviceManager.restart）
+Open Settings…
+Redetect Device            (MultitouchDeviceManager.restart)
 ──────────
-Magic Mouse Toolkit について
-終了 ⌘Q
+About Magic Mouse Toolkit
+Quit ⌘Q
 ```
-アイコン: SF Symbols `computermouse.fill`（template image）。設定ウィンドウは lazy 生成・closeで解放（`NSWindow.isReleasedWhenClosed` は SwiftUI ホスティングと相性が悪いので false にし、参照を nil 代入で解放）。
+Icon: SF Symbols `computermouse.fill` (template image). The settings window is created lazily and released on close (`NSWindow.isReleasedWhenClosed` doesn't play well with SwiftUI hosting, so set it to false and release by assigning the reference to nil).
 
-## 10. AppDelegate — 起動シーケンス
+## 10. AppDelegate — launch sequence
 
 1. `UserDefaults.register(defaults:)`
-2. `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true])` — 未許可なら 2秒間隔のポーリングで許可を待つ（**許可後にタイマー破棄**。これが唯一のタイマー）
-3. 許可後: `MultitouchDeviceManager.shared.start()` → `EventInterceptor.shared.start()`
-4. メニューバーアイコン設置
-5. `didWakeNotification` 購読 → `MultitouchDeviceManager.restart()`
+2. `AXIsProcessTrustedWithOptions([kAXTrustedCheckOptionPrompt: true])` — if not yet authorized, wait for authorization by polling every 2 seconds (**discard the timer once authorized**; this is the only timer)
+3. Once authorized: `MultitouchDeviceManager.shared.start()` → `EventInterceptor.shared.start()`
+4. Set up the menu bar icon
+5. Subscribe to `didWakeNotification` → `MultitouchDeviceManager.restart()`
 
-## 11. スレッドと同期
+## 11. Threading and synchronization
 
-| データ | 書き手 | 読み手 | 保護 |
+| Data | Writer | Reader | Protection |
 |---|---|---|---|
-| TouchSharedState (fingerCount, lastFrameAt) | MTコールバックスレッド | イベントタップ(メインRunLoop) | os_unfair_lock（保持時間ナノ秒級） |
-| lastScrollAt / momentumActive / buttonDown / lastButtonUpAt / convertingToMiddle | イベントタップ | MTコールバックスレッド | 同上（同じ lock を共用してよい） |
-| SettingsSnapshot | メイン（通知受信時に差し替え） | 両コールバック | 構造体まるごと差し替え + lock |
-| DebugFeed | MTコールバック→メインへ dispatch | SwiftUI | isActive フラグで送出自体を抑制 |
+| TouchSharedState (fingerCount, lastFrameAt) | MT callback thread | Event tap (main RunLoop) | os_unfair_lock (nanosecond-scale hold time) |
+| lastScrollAt / momentumActive / buttonDown / lastButtonUpAt / convertingToMiddle | Event tap | MT callback thread | same as above (may share the same lock) |
+| SettingsSnapshot | Main (swapped in on notification receipt) | Both callbacks | whole-struct swap + lock |
+| DebugFeed | MT callback → dispatched to main | SwiftUI | emission itself is suppressed via the isActive flag |
 
-## 12. テストチェックリスト（実機）
+## 12. Test checklist (real hardware)
 
-1. ガラス/ウィンドウ以前にコア動作: 1本指タップ左、右ゾーンで右、2本指タップ左、2本指物理クリックでミドル（Finder のタブ閉じ等で確認）
-2. **誤反応シナリオ**（すべてクリックが発生しないこと）: ゆっくりスクロール開始 / 素早いフリック / 往復スクロール / 慣性スクロール中に指で停止 / 物理クリックしながらのタップ / トラックパッド操作中（そもそも反応しないこと）
-3. 他マウス・トラックパッドのクリック/スクロールが一切影響を受けないこと
-4. 設定変更の即時反映(リビルド・再起動なし)
-5. スリープ復帰後の動作、「デバイスを再検出」の動作
-6. リビルド→再署名→権限が失効しないこと
-7. アクティビティモニタでアイドル CPU 0%台・メモリ ≤15MB
-8. CGEventTap 自己復旧: 高負荷時に機能停止しないこと（長時間運用で確認）
+1. Core behavior before glass/window concerns: one-finger tap = left click, right click in the right zone, two-finger tap = left click, two-finger physical click = middle click (verify via e.g. closing a tab in Finder)
+2. **False-trigger scenarios** (no click should occur in any of these): slow scroll start / quick flick / back-and-forth scroll / stopping momentum scroll with a finger / tapping while physically clicking / operating a trackpad (should not respond at all)
+3. Clicks/scrolling from other mice or trackpads must be completely unaffected
+4. Settings changes take effect immediately (no rebuild or restart)
+5. Behavior after waking from sleep; behavior of "Redetect Device"
+6. Rebuild → re-sign → permissions must not be revoked
+7. Idle CPU in the single digits % and memory ≤15MB in Activity Monitor
+8. CGEventTap self-recovery: must not stop functioning under high load (verify over extended operation)
 
-## 13. フェーズ2への引き継ぎポイント
+## 13. Handoff points for Phase 2
 
-- 見た目の変更は `DesignSystem.swift` のトークン値変更 + `GlassWindow.swift` 追加（borderless NSWindow サブクラス）に閉じる。SettingsView のレイアウト構造は再利用
-- Liquid Glass 検証: `.glassEffect()` をborderless透明ウィンドウで単体検証してから統合
+- Visual changes are confined to changing token values in `DesignSystem.swift` plus adding `GlassWindow.swift` (a borderless NSWindow subclass). SettingsView's layout structure is reused as-is
+- Liquid Glass verification: validate `.glassEffect()` standalone in a borderless transparent window before integrating
 
-## 14. 3本指タップ = マクロレコーダー / トラッキング速度ブースト（2026-07-10実装）
+## 14. Three-finger tap = macro recorder / tracking-speed boost (implemented 2026-07-10)
 
-ここでは、実装済みのマクロレコーダーとトラッキング速度ブーストの要点を記す。
+This section records the key points of the already-implemented macro recorder and tracking-speed boost.
 
-### マクロレコーダー(3本指タップ)
-- `ActionKind.macro([RecordedKeyEvent])` を新設。`RecordedKeyEvent` は `keyCode/flags/isDown/isFlagsChanged/offset` を持つ Codable
-- `MacroRecorder`（`ObservableObject`）: listen-only の専用 CGEventTap で keyDown/keyUp/flagsChanged を記録。上限200イベント/60秒で自動停止。自己合成イベント（`SynthesizedClick.signature`）は除外
-- `ActionExecutor.perform(.macro)`: 専用シリアルキューで `offset` どおりに `CGEvent` を再生。`os_unfair_lock` で保護した世代カウンタにより、再生中の再トリガーは即座に前の再生をキャンセルする（重複再生防止）
-- 3本指タップの既定アクションは空マクロ（`.macro([])`）に変更。旧 Mission Control キーストロークの既定は廃止
-- 設定UI: 「3本指タップ(マクロ)」セクションに録画開始/停止・クリア・イベント数表示を追加
+### Macro recorder (three-finger tap)
+- Added `ActionKind.macro([RecordedKeyEvent])`. `RecordedKeyEvent` is a Codable holding `keyCode/flags/isDown/isFlagsChanged/offset`
+- `MacroRecorder` (`ObservableObject`): records keyDown/keyUp/flagsChanged via a dedicated listen-only CGEventTap. Auto-stops at a cap of 200 events/60 seconds. Self-synthesized events (`SynthesizedClick.signature`) are excluded
+- `ActionExecutor.perform(.macro)`: replays `CGEvent`s according to `offset` on a dedicated serial queue. A generation counter protected by `os_unfair_lock` ensures that re-triggering during playback immediately cancels the previous playback (prevents duplicate playback)
+- The default action for three-finger tap was changed to an empty macro (`.macro([])`). The old default of a Mission Control keystroke was removed
+- Settings UI: added recording start/stop, clear, and event-count display to the "Three-finger tap (macro)" section
 
-### トラッキング速度ブースト
-- `PointerSpeedManager`: `IOHIDEventSystemClient` SPI（`IOHIDEventSystemClientCreateSimpleClient` / `CopyProperty` / `SetProperty`）経由で `HIDMouseAcceleration`（システム設定スライダーの実体、IOFixed 16.16）を直接書き換え、即時反映。起動時に初期値を保持し復元可能にする
-- SPI宣言は既存の単一ブリッジヘッダー `MultitouchBridge.h` に統合（`swiftc -import-objc-header` は1つしか指定できないため）
-- `AppSettings.pointerSpeedBoost: Double` を追加、`SettingsSnapshot` に反映
-- 設定UI: 「カーソル速度ブースト」スライダーを追加
+### Tracking-speed boost
+- `PointerSpeedManager`: directly rewrites `HIDMouseAcceleration` (the value behind the System Settings slider, IOFixed 16.16) via the `IOHIDEventSystemClient` SPI (`IOHIDEventSystemClientCreateSimpleClient` / `CopyProperty` / `SetProperty`), applying it immediately. The initial value is captured at launch so it can be restored
+- The SPI declarations are consolidated into the existing single bridging header `MultitouchBridge.h` (since `swiftc -import-objc-header` only accepts one)
+- Added `AppSettings.pointerSpeedBoost: Double`, reflected in `SettingsSnapshot`
+- Settings UI: added a "Cursor Speed Boost" slider
 
-### ビルド・実機確認
-- `./build.sh` 実行、上記2機能を含む全ソースがコンパイル成功。既存の `onChange(of:perform:)` 非推奨警告以外エラーなし。`build/Magic Mouse Toolkit.app` 生成・署名まで確認済み
-- マクロ録画／再生と速度ブーストは実機確認済み
-- 仮想トラックパッド、2本指スクロール、ネイティブ慣性、内蔵トラックパッドとの入力分離も実機確認済み
-- アクセシビリティ権限の実行中切り替えは既知のmacOS入力フリーズを誘発し得るため、回帰テスト対象外。安全要件は`SAFETY.md`を参照
+### Build and real-hardware verification
+- Ran `./build.sh`; all sources, including the two features above, compile successfully. No errors other than the existing `onChange(of:perform:)` deprecation warning. Confirmed through generation and signing of `build/Magic Mouse Toolkit.app`
+- Macro recording/playback and the speed boost have been verified on real hardware
+- Virtual trackpad, two-finger scroll, native momentum, and input separation from the built-in trackpad have also been verified on real hardware
+- Toggling Accessibility permission mid-run can trigger a known macOS input freeze, so it is excluded from regression testing. See `SAFETY.md` for safety requirements

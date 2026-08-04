@@ -1,151 +1,151 @@
-# Magic Mouse Toolkit デザインシステム（DESIGN.md）
+# Magic Mouse Toolkit Design System (DESIGN.md)
 
-作成 2026-07-02 / 全面改訂 2026-07-28。
-**正本は `Sources/DesignSystem.swift`。このドキュメントはその意図と実測の根拠を説明する。**
-値が食い違ったらコードが正しい。ビューに直値を書かず、必ず `DS.*` トークンを経由すること。
+Created 2026-07-02 / fully revised 2026-07-28.
+**The source of truth is `Sources/DesignSystem.swift`. This document explains its intent and the empirical basis behind it.**
+If values disagree, the code is correct. Never write literal values in views — always go through `DS.*` tokens.
 
-当初あった「フェーズ1（ネイティブ）→ フェーズ2（Liquid Glass 再スキン）」の二段構えは
-2026-07-06 に完了済み。以下はすべて現行（フェーズ2以降）の実装を記述する。
+The original two-stage plan of "Phase 1 (native) → Phase 2 (Liquid Glass reskin)"
+was completed on 2026-07-06. Everything below describes the current (post-Phase-2) implementation.
 
-## デザインコンセプト
+## Design concept
 
-**「Magic Mouse 2（白）の表面ガラスをそのままウィンドウにする」**
+**"Turn the surface glass of the Magic Mouse 2 (white) directly into the window itself"**
 
-- 標準の `.titled` ウィンドウ＋透明タイトルバー＋空の unified `NSToolbar`。信号機とタイトルバーは自作しない
-- ウィンドウ全面に `glassEffect(.regular)` を敷き、その上に**白プレート**を全辺 8pt インセットで載せる。
-  この 8pt の帯が「ガラスのリム」に見える
-- 装飾はガラスの物理表現に必要なものだけ。**影・グラデーション・複数のアクセント色は持たない**
-- 白プレートは白固定（`window.appearance = .aqua` で外観をライトに固定）。テキストはシステム外観追従トークンを使う
+- A standard `.titled` window + a transparent title bar + an empty unified `NSToolbar`. The traffic-light controls and title bar are not custom-built
+- `glassEffect(.regular)` is spread across the full window, with a **white plate** placed on top inset 8pt from every edge.
+  This 8pt band is what reads as the "glass rim"
+- Decoration is limited to what's needed for the physical representation of glass. **No shadows, gradients, or multiple accent colors**
+- The white plate is fixed white (`window.appearance = .aqua` locks the appearance to light). Text uses tokens that follow the system appearance
 
-## トークン規約（自己ルール）
+## Token conventions (self-imposed rules)
 
-1. 同じ役割には同じトークン。**役割ごとの階段は1本だけ**持ち、重複トークンを作らない
-   （例: コンテンツ上余白は `contentTop` 1本。ページ種別ごとに増やさない）
-2. スペーシングは 4/8 グリッド（`DS.Space`）から外れた値を使わない。例外は `DS.Plate` のみ
-3. フォントウェイトは `.regular` と `.semibold` だけ（`.medium` は使わない）
-4. 影は使わない。角丸のグラマー（continuous / circular）を混ぜない
-5. アクセント色は `DS.Color.accent` の1色のみ。**明示的に `.tint` するのは `Toggle` だけ**
-6. **レイアウト値は目視で決めない。** @2x キャプチャの画素実測かフォントメトリクス実測で決め、
-   根拠をトークンのコメントに残す
+1. One token per role. **Only one ladder per role** — never create duplicate tokens
+   (e.g., top content padding is `contentTop`, one value only. Don't add more per page type)
+2. Never use spacing values that fall outside the 4/8 grid (`DS.Space`). The only exception is `DS.Plate`
+3. Only `.regular` and `.semibold` font weights (never `.medium`)
+4. No shadows. Don't mix corner-radius styles (continuous / circular)
+5. Only one accent color, `DS.Color.accent`. **The only place it is explicitly `.tint`ed is `Toggle`**
+6. **Layout values are never decided by eye.** Determine them from pixel measurements on @2x captures or from font-metric measurements,
+   and leave the basis as a comment on the token
 
-## トークン定義（`Sources/DesignSystem.swift`）
+## Token definitions (`Sources/DesignSystem.swift`)
 
-### カラー `DS.Color`
+### Colors `DS.Color`
 
-| トークン | 値 | 用途 |
+| Token | Value | Usage |
 |---|---|---|
-| `labelPrimary` | `.primary` | 操作行のラベル・見出し |
-| `labelSecondary` | `.secondary` | キャプション・単位・数値 |
-| `accent` | `.controlAccentColor` | Toggle のみ（唯一のアクセント） |
-| `debugPass` / `debugFail` | systemGreen / systemRed | ライブ表示の判定 ✓ / ✗ |
-| `plateBase` | white 0.78 | 白プレートの地。縁がわずかに透ける |
-| `plateCore` | white 0.82 | 縁から 26pt 引っ込め blur(18) した白コア |
-| `cardFill` | rgb(241,241,241) | ライブ表示カード |
+| `labelPrimary` | `.primary` | Labels/headings on control rows |
+| `labelSecondary` | `.secondary` | Captions, units, numeric values |
+| `accent` | `.controlAccentColor` | `Toggle` only (the sole accent) |
+| `debugPass` / `debugFail` | systemGreen / systemRed | ✓ / ✗ judgment in the live display |
+| `plateBase` | white 0.78 | The white plate's base; edges show a slight translucency |
+| `plateCore` | white 0.82 | The white core, inset 26pt from the edge and blurred(18) |
+| `cardFill` | rgb(241,241,241) | Live-display cards |
 
-`plateBase` + `plateCore` の合成で、中央 ≈0.96（ほぼ白）／縁 ≈0.78（下のガラスが滲む）になる。
-中央基点の `RadialGradient` は大画面で円形の明度ムラが出るため**使わない**（縁からの距離ベースのフェード）。
+Compositing `plateBase` + `plateCore` yields a center of ≈0.96 (nearly white) and an edge of ≈0.78 (the glass beneath shows through).
+A center-anchored `RadialGradient` is **not used** because it produces circular banding on large screens (the fade is instead distance-from-edge based).
 
-### スペーシング `DS.Space`
+### Spacing `DS.Space`
 
-`xs 4 / s 8 / m 12 / l 16 / xl 24 / xxl 32`。この階段だけを使い、用途ごとの一点物を作らない。
+`xs 4 / s 8 / m 12 / l 16 / xl 24 / xxl 32`. Only use this ladder — never create one-off values per use case.
 
-### プレート幾何 `DS.Plate` — **触るな**
+### Plate geometry `DS.Plate` — **do not touch**
 
-| トークン | 値 | 意味 |
+| Token | Value | Meaning |
 |---|---|---|
-| `inset` | 8 | ガラスリムの幅（白プレートを全辺から内側へ） |
-| `fadeWidth` | 26 | 白コアをプレート縁から引っ込める幅＝フェード帯 |
-| `fadeBlur` | 18 | 白コアの縁ぼかし |
-| `radius` | 16 | 白プレートの角丸（**必ず `style: .continuous`**） |
+| `inset` | 8 | Width of the glass rim (how far the white plate sits inside the edges) |
+| `fadeWidth` | 26 | How far the white core is pulled in from the plate edge = the fade band |
+| `fadeBlur` | 18 | Edge blur applied to the white core |
+| `radius` | 16 | Corner radius of the white plate (**must always use `style: .continuous`**) |
 
-**同心円角丸の原則**: 内側の角丸 = 外側ウィンドウの角丸 − インセット。
-macOS 26 の `.titled` ウィンドウは continuous（squircle・カーブ範囲実測 ≈28pt）なので、
-インセット 8pt に対して continuous 16pt がリム幅を角でも辺でも均一（実測 7.5〜8.5pt）に見せる。
-`circular` にすると角でリムが痩せる。
+**Principle of concentric corner radii**: the inner corner radius = the outer window's corner radius − the inset.
+Since macOS 26's `.titled` window uses a continuous (squircle) curve with a measured curvature range of ≈28pt,
+a continuous radius of 16pt against an 8pt inset makes the rim width look uniform (measured 7.5–8.5pt) at both corners and edges.
+Using `circular` would make the rim look thin at the corners.
 
-### 角丸 `DS.Radius`
+### Corner radius `DS.Radius`
 
-`card = 10` のみ。プレート幾何を除き、アプリ内の角丸はこの1種類。
+Only `card = 10`. Aside from the plate geometry, this is the only corner radius used anywhere in the app.
 
-### タイポグラフィ `DS.Font`（5トークン）
+### Typography `DS.Font` (5 tokens)
 
-| トークン | 定義 | 用途 |
+| Token | Definition | Usage |
 |---|---|---|
-| `pageTitle` | 13 / semibold | ページ見出し「詳細設定」・戻るボタンのアイコン |
-| `sectionHeader` | 11 / semibold | Section ヘッダー・カラム見出し |
-| `body` | 13 | 操作行のラベル・HUD 本文 |
-| `caption` | 11 | 補足キャプション・カード内本文 |
-| `value` | 12 / monospaced | スライダー値・ライブ表示の実測値 |
+| `pageTitle` | 13 / semibold | Page heading "Advanced Settings," back-button icon |
+| `sectionHeader` | 11 / semibold | Section headers, column headings |
+| `body` | 13 | Labels on control rows, HUD body text |
+| `caption` | 11 | Supplementary captions, card body text |
+| `value` | 12 / monospaced | Slider values, measured values in live displays |
 
-Figma カンプの 10pt / 7pt は実機で小さすぎたため macOS 標準の可読サイズへ引き上げ済み（2026-07-10）。
+The Figma comp's 10pt / 7pt were too small on real hardware, so they were raised to macOS's standard legible sizes (2026-07-10).
 
-### レイアウト `DS.Layout`
+### Layout `DS.Layout`
 
-| トークン | 値 | 根拠 |
+| Token | Value | Basis |
 |---|---|---|
-| `windowSize` | 700 × 392 | contentSize。unified タイトルバー 66pt が上に足され総高 458（実測） |
-| `contentLeading` / `contentTrailing` | 32 (`Space.xxl`) | 左右対称。40→32 に短縮（2026-07-28 実機フィードバック） |
+| `windowSize` | 700 × 392 | contentSize. The unified title bar adds 66pt on top for a total measured height of 458 |
+| `contentLeading` / `contentTrailing` | 32 (`Space.xxl`) | Left/right symmetric. Shortened from 40→32 (2026-07-28 real-hardware feedback) |
 | `mainColumnWidth` | 328 | 32 + **328** + 44 + 264 + 32 = 700 |
-| `columnGap` | 44 | 左カラム右端〜カード左端 |
-| `liveCardSize` | 264 × 340 | プレート内に収める。はみ出し禁止 |
-| `contentTop` | 8 (`Space.s`) | タイトルバー（safe area）下端からの距離。**全ページ共用** |
-| `formBuiltInInset` | 30 | `Form(.grouped)` の内蔵インセット。**@2x 実測値** |
-| `formInsetCompensation` | `contentLeading − 30` = 2 | 詳細設定ページの左右端をメイン画面に揃える補正 |
-| `rowHeight` | 26 | 操作行の固定高。折り返しで揺れないよう機械的に固定 |
-| `sliderLabelWidth` | 176 | 最長ラベル en "2-finger simultaneity window" = 175.2pt 実測 → 8グリッド直上 |
-| `valueWidth` | 64 | 最長値 en "0.25 sec" = 59.3pt 実測 → 8グリッド直上 |
+| `columnGap` | 44 | From the right edge of the left column to the left edge of the card |
+| `liveCardSize` | 264 × 340 | Must fit within the plate. No overflow allowed |
+| `contentTop` | 8 (`Space.s`) | Distance from the bottom of the title bar (safe area). **Shared across all pages** |
+| `formBuiltInInset` | 30 | `Form(.grouped)`'s built-in inset. **@2x measured value** |
+| `formInsetCompensation` | `contentLeading − 30` = 2 | Correction to align the left/right edges of the Advanced Settings page with the main screen |
+| `rowHeight` | 26 | Fixed height for control rows. Fixed mechanically so wrapping never causes wobble |
+| `sliderLabelWidth` | 176 | Longest label, en "2-finger simultaneity window" measured at 175.2pt → rounded up to the next 8-grid step |
+| `valueWidth` | 64 | Longest value, en "0.25 sec" measured at 59.3pt → rounded up to the next 8-grid step |
 
-**高さの内訳**: `contentTop 8 + 見出し 15 + 間 12 + カード 340 = 375` + 下余白 9 + リム 8 = 392。
-上を詰めたら下端も実測し、上下が同程度（上 8 / 下 9.5pt）になるまで高さトークンを縮める。
+**Height breakdown**: `contentTop 8 + heading 15 + gap 12 + card 340 = 375` + bottom padding 9 + rim 8 = 392.
+When tightening the top, also measure the bottom edge, and shrink the height tokens until top and bottom are comparable (top 8 / bottom 9.5pt).
 
-**`Form(.formStyle(.grouped))` の左端（macOS 26・幅 700pt で @2x 実測・2026-07-28）**
+**Left edge of `Form(.formStyle(.grouped))` (macOS 26, 700pt width, @2x measured, 2026-07-28)**
 
-| 要素 | 左端 |
+| Element | Left edge |
 |---|---|
-| セクション見出しテキスト | 30pt |
-| グループカード内の行の中身（ラベル・キャプション） | 30pt |
-| **グループカードの背景矩形そのもの** | **20pt**（見出し・行より 10pt 外側） |
+| Section header text | 30pt |
+| Contents of rows within a group card (labels, captions) | 30pt |
+| **The group card's background rectangle itself** | **20pt** (10pt further out than the headers/rows) |
 
-基準にできるのは「見出しと行が共有する 30」。**カード背景だけは常に 10pt 外へはみ出し、
-Form の構造を保ったままでは揃わない**（揃えたければ `VStack` + 自前カードへの構造変更が要る）。
-自前ヘッダー（戻るボタン＋ページタイトル）は `contentLeading` を、
-Form には `formInsetCompensation` を与えることで、全テキストが同一の左ライン（32pt）に乗る。
+The only baseline that can be shared is the 30 that headers and rows have in common. **Only the card background always overflows 10pt outward,
+and this cannot be reconciled while keeping Form's structure intact** (reconciling it would require restructuring into a `VStack` with a custom card).
+By giving the custom header (back button + page title) `contentLeading`, and giving the Form `formInsetCompensation`,
+all text ends up on the same left line (32pt).
 
-## コンポーネント規約
+## Component conventions
 
-- **トグル**: `Toggle` + `.toggleStyle(.switch)` + `.controlSize(.small)` + `.tint(DS.Color.accent)`
-- **ボタン**: 文法は `.bordered` **1本に統一**し、階層は `controlSize` だけで表す
-  （主要＝`.regular` / 副次・下位設定＝`.small`）。`.borderedProminent` は使わない
-- **スライダー行**: 全スライダーで `SliderRow` を共用。`lineLimit(1)` + `frame(height: rowHeight)` で固定。
-  **値カラムには「数値＋単位」しか入れない**（「先端から25%」のような修飾語は行ラベル側に持たせる）。
-  固定幅の値カラムに可変長テキストを入れるとその行だけ折り返し、セクション間で行のリズムが崩れる
-- **セクション**: 詳細設定ページは `Form` + `Section(header:)` + `.formStyle(.grouped)` +
-  `.scrollContentBackground(.hidden)`。メイン画面はフラットな `VStack`
-- **ライブ表示**: 数値は必ず `DS.Font.value`（等幅）。判定は ✓/✗ + `debugPass`/`debugFail`
-- 独自描画のカスタムコントロールは作らない
+- **Toggle**: `Toggle` + `.toggleStyle(.switch)` + `.controlSize(.small)` + `.tint(DS.Color.accent)`
+- **Buttons**: standardize on `.bordered` **only**, and express hierarchy purely through `controlSize`
+  (primary = `.regular` / secondary/lower-level settings = `.small`). `.borderedProminent` is not used
+- **Slider rows**: share `SliderRow` across every slider. Fixed via `lineLimit(1)` + `frame(height: rowHeight)`.
+  **The value column contains only "number + unit"** (qualifiers like "25% from the tip" belong on the row label side).
+  Putting variable-length text in a fixed-width value column causes that row alone to wrap, breaking the rhythm of rows across sections
+- **Sections**: the Advanced Settings page uses `Form` + `Section(header:)` + `.formStyle(.grouped)` +
+  `.scrollContentBackground(.hidden)`. The main screen uses a flat `VStack`
+- **Live display**: numeric values always use `DS.Font.value` (monospaced). Judgments are shown as ✓/✗ + `debugPass`/`debugFail`
+- No custom-drawn controls are created
 
-## 禁止事項
+## Prohibited
 
-- ビュー内での直値指定（`.padding(13)`、`Color.gray`、`.font(.system(size: 12))` 等）
-- サードパーティフォント・カラーアセット
-- 影、複数のアクセント色、`.borderedProminent`
-- 幅を固定した2カラム `HStack` の末尾に `Spacer(minLength: 0)` を残すこと。
-  `spacing` は隣接ペアすべてに入るため gap が2回分効き、はみ出した `HStack` が中央寄せされて
-  左右余白が非対称になる。余白は外側の `padding` で対称に取る
-- 目視でのレイアウト決定。実装後は @2x キャプチャで左右端・上下端の実座標を測って数値で確認する
+- Literal values specified directly in views (`.padding(13)`, `Color.gray`, `.font(.system(size: 12))`, etc.)
+- Third-party fonts or color assets
+- Shadows, multiple accent colors, `.borderedProminent`
+- Leaving a trailing `Spacer(minLength: 0)` at the end of a fixed-width two-column `HStack`.
+  Since `spacing` applies to every adjacent pair, the gap ends up counted twice, and the overflowing `HStack`
+  gets center-aligned, making the left/right margins asymmetric. Keep margins symmetric via the outer `padding` instead
+- Deciding layout by eye. After implementation, verify actual left/right and top/bottom coordinates numerically via @2x captures
 
-## ローカライズとレイアウト
+## Localization and layout
 
-`NSLocalizedString` の第1引数は**日本語リテラルそのものがキー**（ja/en 両 `.strings` の共通キー・現在117件）。
-文言を変えるとキーが変わるため、レイアウト調整で表示文字列に手を入れるときは
-必ず `Resources/{ja,en}.lproj/Localizable.strings` を同時に更新し、キー突合（欠落0・未使用0）を確認する。
+The first argument to `NSLocalizedString` **is the Japanese literal itself, used as the key** (shared key across both ja/en `.strings` files, currently 117 entries).
+Since changing the wording changes the key, whenever a layout adjustment touches the displayed string,
+you must update `Resources/{ja,en}.lproj/Localizable.strings` for both languages at the same time and verify the keys match up (0 missing, 0 unused).
 
-固定幅カラムの幅は**全言語で**フォント実測してから決める（日本語だけ見て決めない）。
-実際、英語ラベルのほうが日本語より長く、`sliderLabelWidth` は英語が律速している。
+Determine fixed-width column widths only after measuring fonts **across all languages** (don't decide by looking at Japanese alone).
+In fact, English labels run longer than Japanese ones, and `sliderLabelWidth` is bottlenecked by English.
 
-## 検証手順
+## Verification steps
 
-1. `./build.sh`（Xcode プロジェクトなし。SourceKit の "Cannot find ... in scope" は各ファイル単独索引による偽陽性）
-2. `open "build/Magic Mouse Toolkit.app"` → `pgrep -x MagicMouseToolkit` で生存確認
-3. `screencapture -l <windowID>` で @2x キャプチャ（px ÷ 2 = pt）し、左右端・上下端・行高を画素実測
-4. ローカライズキー突合（`Sources/*.swift` の第1引数 vs `plutil -convert json` した両 `.strings`）
+1. `./build.sh` (no Xcode project. SourceKit's "Cannot find ... in scope" is a false positive from per-file independent indexing)
+2. `open "build/Magic Mouse Toolkit.app"` → confirm it's running with `pgrep -x MagicMouseToolkit`
+3. Take an @2x capture with `screencapture -l <windowID>` (px ÷ 2 = pt) and measure left/right/top/bottom edges and row heights in pixels
+4. Cross-check localization keys (the first argument across `Sources/*.swift` vs. both `.strings` files converted with `plutil -convert json`)

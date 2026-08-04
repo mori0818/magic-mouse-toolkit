@@ -1,50 +1,52 @@
 # Safety
 
-Magic Mouse Toolkitは、システム全体の入力を監視・変換するCGEventTapと、Appleの非公開
-MultitouchSupport APIを使用します。通常利用では実機確認済みですが、権限やプロセスを
-強制的に変更する操作には注意が必要です。
+Magic Mouse Toolkit uses CGEventTap, which monitors and transforms system-wide
+input, and Apple's private MultitouchSupport API. It has been verified on real
+hardware for normal use, but operations that forcibly change permissions or
+processes require caution.
 
-## アクセシビリティ権限
+## Accessibility permission
 
-Magic Mouse Toolkitの実行中に、次の操作をしないでください。
+While Magic Mouse Toolkit is running, do not do the following:
 
-- システム設定でMagic Mouse Toolkitのアクセシビリティ権限をOFFにする
-- アクセシビリティ一覧からMagic Mouse Toolkitを削除する
-- `tccutil reset`で権限をリセットする
-- 権限を短時間に何度もON／OFFする
+- Turn off Magic Mouse Toolkit's accessibility permission in System Settings
+- Remove Magic Mouse Toolkit from the accessibility list
+- Reset permissions with `tccutil reset`
+- Toggle the permission ON/OFF repeatedly in a short time
 
-CGEventTapを持つアプリの実行中に権限を剥奪すると、macOS側でクリックやキーボード入力が
-停止する場合があります。
+Revoking permission while an app holding a CGEventTap is running can cause
+clicks and keyboard input to stop responding on the macOS side.
 
-権限を変更する場合:
+When changing permissions:
 
-1. メニューバーからMagic Mouse Toolkitを通常終了する
-2. Activity Monitorで`MagicMouseToolkit`が終了したことを確認する
-3. システム設定で権限を変更する
-4. Magic Mouse Toolkitを起動する
+1. Quit Magic Mouse Toolkit normally from the menu bar
+2. Confirm in Activity Monitor that `MagicMouseToolkit` has terminated
+3. Change the permission in System Settings
+4. Launch Magic Mouse Toolkit
 
-入力が反応しなくなった場合は、別の利用可能な入力経路からMagic Mouse Toolkitを終了してください。
-それでも復旧しない場合はmacOSを再起動してください。
+If input stops responding, quit Magic Mouse Toolkit using another available
+input path. If that does not recover it, restart macOS.
 
-## カーソル速度
+## Cursor speed
 
-速度ブーストはシステム全体の`HIDMouseAcceleration`を一時的に変更します。
-通常終了時には元の値へ戻します。
+The speed boost temporarily changes the system-wide `HIDMouseAcceleration`.
+It is restored to its original value on normal quit.
 
-強制終了後に速度が残った場合:
+If the speed remains altered after a force quit:
 
-1. Magic Mouse Toolkitを終了する
-2. 「システム設定 → マウス → 軌跡の速さ」を一度動かす
-3. 必要ならMagic Mouse Toolkitの速度ブーストをOFFにして再起動する
+1. Quit Magic Mouse Toolkit
+2. Move the "System Settings → Mouse → Tracking speed" slider once
+3. If needed, turn off Magic Mouse Toolkit's speed boost and restart it
 
-## マクロ録画
+## Macro recording
 
-録画中はすべてのキーボードイベントをlisten-onlyのCGEventTapで監視します。
-録画データは端末内にだけ保存されますが、パスワードや秘密情報を入力している間は
-録画しないでください。
+While recording, all keyboard events are monitored via a listen-only
+CGEventTap. Recorded data is stored only on the local device, but you should
+not record while entering passwords or other secret information.
 
-## 開発・検証
+## Development and verification
 
-入力系コードを変更した場合でも、権限のON／OFFを回帰テストとして使用しないでください。
-EventInterceptor、PermissionMonitor、MultitouchDevice周辺の変更は、ビルド・コードレビュー・
-通常終了経路の確認を先に行ってください。
+Even when modifying input-related code, do not use permission ON/OFF toggling
+as a regression test. For changes around EventInterceptor, PermissionMonitor,
+and MultitouchDevice, first build, review the code, and verify the normal
+quit path.
