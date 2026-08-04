@@ -34,8 +34,6 @@ struct SettingsSnapshot {
     var buttonVetoWindow: Double
     var twoFingerSyncWindow: Double
 
-    var deviceFilterStrict: Bool
-
     /// 0 = オフ(システム設定に従う)。0より大きい場合はその値をHIDMouseAccelerationへ書き込む
     var pointerSpeedBoost: Double
 
@@ -75,8 +73,6 @@ final class AppSettings {
         static let scrollVetoWindow = "mmt.veto.scroll"
         static let buttonVetoWindow = "mmt.veto.button"
         static let twoFingerSyncWindow = "mmt.tap2.syncWindow"
-
-        static let deviceFilterStrict = "mmt.device.strict"
 
         static let pointerSpeedBoost = "mmt.pointer.speedBoost"
 
@@ -119,8 +115,6 @@ final class AppSettings {
         Key.buttonVetoWindow: 0.10,
         Key.twoFingerSyncWindow: 0.08,
 
-        Key.deviceFilterStrict: true,
-
         Key.pointerSpeedBoost: 0.0,
 
         // プロトタイプ検証(2026-07-20 Step5)でゲイン調整不要と確認済みの値
@@ -159,8 +153,8 @@ final class AppSettings {
         get { defaults.bool(forKey: Key.threeFingerTapEnabled) }
         set { defaults.set(newValue, forKey: Key.threeFingerTapEnabled); notifyChanged() }
     }
-    /// ActionKind をJSON文字列としてUserDefaultsに保存する。デコード失敗時は安全側(クリックなし)にせず
-    /// 既定のMission Controlキーストロークへフォールバックする。
+    /// ActionKind をJSON文字列としてUserDefaultsに保存する。デコード失敗時は空のマクロ(.macro([]))
+    /// にフォールバックする(安全側)。
     var threeFingerTapAction: ActionKind {
         get {
             guard let json = defaults.string(forKey: Key.threeFingerTapAction),
@@ -241,11 +235,6 @@ final class AppSettings {
         set { defaults.set(newValue, forKey: Key.twoFingerSyncWindow); notifyChanged() }
     }
 
-    var deviceFilterStrict: Bool {
-        get { defaults.bool(forKey: Key.deviceFilterStrict) }
-        set { defaults.set(newValue, forKey: Key.deviceFilterStrict); notifyChanged() }
-    }
-
     /// 0 = オフ(システム設定のまま)。0より大きい値はHIDMouseAccelerationへ直接書き込む
     /// (システム設定スライダーの上限3.0を超える値も設定可能)。
     var pointerSpeedBoost: Double {
@@ -307,7 +296,6 @@ final class AppSettings {
             scrollVetoWindow: scrollVetoWindow,
             buttonVetoWindow: buttonVetoWindow,
             twoFingerSyncWindow: twoFingerSyncWindow,
-            deviceFilterStrict: deviceFilterStrict,
             pointerSpeedBoost: pointerSpeedBoost,
             trackpadModeGain: trackpadModeGain
         )
@@ -340,5 +328,20 @@ final class SettingsStore {
         os_unfair_lock_lock(&lock)
         defer { os_unfair_lock_unlock(&lock) }
         return _snapshot
+    }
+
+    // CGEventTapコールバックでBool1個だけ読みたい箇所向け。`snapshot`経由だと
+    // ActionKind(macroの配列)を含む構造体全体をコピーしretain/releaseが発生するため、
+    // 個別フィールドだけを取り出す軽量アクセサを分けている。
+    var middleClickEnabled: Bool {
+        os_unfair_lock_lock(&lock)
+        defer { os_unfair_lock_unlock(&lock) }
+        return _snapshot.middleClickEnabled
+    }
+
+    var verticalScrollOnly: Bool {
+        os_unfair_lock_lock(&lock)
+        defer { os_unfair_lock_unlock(&lock) }
+        return _snapshot.verticalScrollOnly
     }
 }

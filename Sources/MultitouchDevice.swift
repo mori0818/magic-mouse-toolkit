@@ -8,6 +8,9 @@ import QuartzCore
 
 private let magicMouseFamilyIDs: Set<Int32> = [112, 113]
 
+/// familyId(112/113)一致を必須にするか。UIから変更できる設定項目にする予定がないため定数化
+private let deviceFilterStrict = true
+
 private func multitouchContactCallback(
     _ device: MTDeviceRef?,
     _ touches: UnsafeMutablePointer<MTTouch>?,
@@ -99,7 +102,7 @@ final class MultitouchDeviceManager {
         usedFallbackFilter = false
 
         var matched: [MTDeviceRef]
-        if AppSettings.shared.deviceFilterStrict {
+        if deviceFilterStrict {
             matched = strictMatched
             // familyId が想定(112/113)と異なる Magic Mouse 個体への自動フォールバック:
             // 厳格フィルタで0台でも外部デバイスがあればそれを使う(内蔵トラックパッドは除外済み)

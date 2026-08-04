@@ -457,6 +457,12 @@ struct SettingsView: View {
             Section {
                 Button(NSLocalizedString("すべての設定を既定値に戻す", comment: "全設定リセットボタン")) {
                     AppSettings.shared.resetAllToDefaults()
+                    // @AppStorageは自動追従するが、tap3ActionKindは@Stateのため
+                    // UserDefaultsの直接変更(removeObject)を検知できず取り残される
+                    tap3ActionKind = AppSettings.shared.threeFingerTapAction.isTrackpadToggle ? .trackpadToggle : .macro
+                    if case .macro = AppSettings.shared.threeFingerTapAction {
+                        cachedTap3MacroAction = AppSettings.shared.threeFingerTapAction
+                    }
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
