@@ -3,41 +3,41 @@
 Magic Mouse Toolkit is an open-source macOS utility that adds configurable gestures
 and a virtual trackpad mode to Apple Magic Mouse.
 
-日本語・英語UIに対応しています(`AppleLanguages`のシステム設定に従います)。
+The UI supports Japanese and English (follows the system's `AppleLanguages` setting).
 
 ## Features
 
-- 1本指タップによる左／右クリック
-- 2本指タップによる左クリック
-- 2本指の物理クリックによるミドルクリック
-- 3本指で録画したキーボードマクロを実行
-- Magic Mouse表面を1本指でなぞる仮想トラックパッドモード
-- 仮想トラックパッドモード中の2本指スクロールとネイティブ慣性
-- 3本指ダブルタップによるモード切り替え
-- MacBook内蔵トラックパッドとの入力分離
-- Magic Mouseのバッテリー残量表示
-- カーソル速度ブースト
-- タップ範囲・感度・スクロール設定をUIから変更
+- Left/right click via one-finger tap
+- Left click via two-finger tap
+- Middle click via two-finger physical click
+- Play back a recorded keyboard macro with a three-finger tap
+- Virtual trackpad mode: stroke the Magic Mouse surface with one finger
+- Two-finger scrolling and native inertia while in virtual trackpad mode
+- Toggle modes with a three-finger double tap
+- Input isolation from the MacBook's built-in trackpad
+- Magic Mouse battery level display
+- Cursor speed boost
+- Tap zone, sensitivity, and scroll settings configurable from the UI
 
 ## Requirements
 
-- macOS 26以降
+- macOS 26 or later
 - Apple Magic Mouse
-- ビルドにはXcodeまたはmacOS 26 SDKを含むSwift toolchain
-- クリック合成・マクロ・入力変換にはアクセシビリティ権限
+- Xcode, or a Swift toolchain that includes the macOS 26 SDK, to build
+- Accessibility permission for click synthesis, macros, and input remapping
 
-このアプリはAppleの非公開`MultitouchSupport.framework`とIOKit SPIを使用します。
-将来のmacOSアップデートで動作しなくなる可能性があり、Mac App Store向けではありません。
+This app uses Apple's private `MultitouchSupport.framework` and IOKit SPIs.
+It may stop working after a future macOS update and is not intended for the Mac App Store.
 
 ## Safety
 
-**Magic Mouse Toolkitの実行中に、システム設定からアクセシビリティ権限をOFF・削除しないでください。**
+**Do not turn off or remove Accessibility permission from System Settings while Magic Mouse Toolkit is running.**
 
-CGEventTapを使用するアプリの実行中に権限を変更すると、macOSのシステム入力が停止する場合があります。
-権限を変更する必要がある場合は、先にメニューバーからMagic Mouse Toolkitを通常終了してください。
-`tccutil reset`は通常のセットアップやトラブルシューティングでは使用しないでください。
+Changing this permission while an app using CGEventTap is running can freeze macOS system input.
+If you need to change the permission, quit Magic Mouse Toolkit normally from the menu bar first.
+Do not use `tccutil reset` as part of normal setup or troubleshooting.
 
-詳しくは[SAFETY.md](./SAFETY.md)を参照してください。
+See [SAFETY.md](./SAFETY.md) for details.
 
 ## Build
 
@@ -48,47 +48,49 @@ cd magic-mouse-toolkit
 open "build/Magic Mouse Toolkit.app"
 ```
 
-`SIGN_ID`を指定しない場合はad-hoc署名を使用します。
+If `SIGN_ID` is not set, an ad-hoc signature is used.
 
 ```sh
 SIGN_ID="Developer ID Application: Example (TEAMID)" ./build.sh
 ```
 
-ローカルの自己署名証明書も`SIGN_ID`で指定できます。証明書や秘密鍵はリポジトリへ
-コミットしないでください。署名が変わると、macOSからアクセシビリティ権限の再許可を
-求められることがあります。その場合も、権限を変更する前に古いアプリを終了してください。
+You can also specify a local self-signed certificate via `SIGN_ID`. Do not commit
+certificates or private keys to the repository. Changing the signature may cause macOS
+to ask you to re-grant Accessibility permission — in that case too, quit the old app
+before changing the permission.
 
 ## Privacy
 
-- アプリ本体にテレメトリ、解析SDK、ネットワーク送信処理はありません。
-- マクロ録画中は、キーボードのキーコード・修飾キー・押下状態・タイミングを端末内の
-  UserDefaultsへ保存します。文字列や入力内容を外部へ送信しません。
-- パスワードや秘密情報を入力している間はマクロを録画しないでください。
-- 診断ログは`~/Library/Logs/MagicMouseToolkit.log`へ保存され、約1 MiBでローテーションします。
-  ログにはジェスチャー判定や座標などの操作メタデータが含まれる場合があります。
+- The app itself has no telemetry, analytics SDKs, or network transmission.
+- While recording a macro, keyboard key codes, modifier keys, press state, and timing
+  are saved to UserDefaults on-device. No strings or input content are sent externally.
+- Do not record a macro while entering passwords or secrets.
+- Diagnostic logs are saved to `~/Library/Logs/MagicMouseToolkit.log` and rotate at
+  about 1 MiB. Logs may contain operational metadata such as gesture decisions and coordinates.
 
 ## System-wide settings
 
-カーソル速度ブーストは、システム全体の`HIDMouseAcceleration`を一時的に変更します。
-通常終了時には元の値へ戻しますが、強制終了後に速度が残った場合は、Magic Mouse Toolkitを
-終了してから「システム設定 → マウス → 軌跡の速さ」を動かして復旧してください。
+The cursor speed boost temporarily changes the system-wide `HIDMouseAcceleration` value.
+It's restored on normal quit, but if the speed stays changed after a force quit, quit
+Magic Mouse Toolkit and then move the "System Settings → Mouse → Tracking speed" slider
+to restore it.
 
 ## Documentation
 
-- [SAFETY.md](./SAFETY.md) — 権限変更・入力フリーズ・速度設定に関する安全情報
-- [SPEC.md](./SPEC.md) — 機能仕様
-- [ARCHITECTURE.md](./ARCHITECTURE.md) — 構成と第三者コードの由来
-- [IMPLEMENTATION.md](./IMPLEMENTATION.md) — 実装仕様
-- [UI_DESIGN.md](./UI_DESIGN.md) — UI・デザイン方針
-- [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) — 第三者コードとライセンス
-- [CONTRIBUTING.md](./CONTRIBUTING.md) — 開発への参加方法
-- [SECURITY.md](./SECURITY.md) — 脆弱性の報告方法
+- [SAFETY.md](./SAFETY.md) — Safety information on permission changes, input freezes, and speed settings
+- [SPEC.md](./SPEC.md) — Feature specification
+- [ARCHITECTURE.md](./ARCHITECTURE.md) — Architecture and third-party code provenance
+- [IMPLEMENTATION.md](./IMPLEMENTATION.md) — Implementation details
+- [UI_DESIGN.md](./UI_DESIGN.md) — UI and design policy
+- [THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) — Third-party code and licenses
+- [CONTRIBUTING.md](./CONTRIBUTING.md) — How to contribute
+- [SECURITY.md](./SECURITY.md) — How to report vulnerabilities
 
 ## Third-party work
 
-Magic Mouse ToolkitはMouseToucherのMITライセンス対象コードと設計を起点の一部として利用し、
-MiddleClickのGPL-3.0実装を参考・改変しています。由来とライセンス全文は
-[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md)を参照してください。
+Magic Mouse Toolkit started in part from MouseToucher's MIT-licensed code and design,
+and references/adapts MiddleClick's GPL-3.0 implementation. See
+[THIRD_PARTY_NOTICES.md](./THIRD_PARTY_NOTICES.md) for provenance and full license text.
 
 ## License
 
